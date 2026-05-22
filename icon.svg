@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Sky background -->
+  <rect width="128" height="128" rx="16" fill="#2E8BC0"/>
+  <!-- Cloud -->
+  <circle cx="40" cy="45" r="14" fill="white" opacity="0.9"/>
+  <circle cx="55" cy="38" r="18" fill="white" opacity="0.9"/>
+  <circle cx="72" cy="42" r="15" fill="white" opacity="0.9"/>
+  <rect x="30" y="45" width="55" height="15" fill="white" opacity="0.9"/>
+  <!-- Platform -->
+  <rect x="20" y="90" width="88" height="16" rx="6" fill="#2ECC40"/>
+  <rect x="20" y="90" width="88" height="5" rx="3" fill="#7FE79F"/>
+  <!-- Player character -->
+  <circle cx="64" cy="62" r="10" fill="#FFCC88"/>
+  <rect x="56" y="72" width="16" height="14" rx="3" fill="#2E86C1"/>
+  <rect x="57" y="86" width="6" height="6" rx="2" fill="#1A5276"/>
+  <rect x="65" y="86" width="6" height="6" rx="2" fill="#1A5276"/>
+  <circle cx="60" cy="60" r="2.5" fill="#333"/>
+  <circle cx="68" cy="60" r="2.5" fill="#333"/>
+</svg>

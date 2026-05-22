@@ -1,0 +1,5 @@
+res://scenes/player.tscn
+res://scripts/platform.gd
+res://scripts/player.gd
+res://scripts/cloud.gd
+res://scripts/coin.gd
