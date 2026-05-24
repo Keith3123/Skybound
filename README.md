@@ -111,6 +111,7 @@ Skybound/
 | ☀️ Day Sky  | Clear blue sky |
 | 🌅 Sunset   | Orange and purple sky |
 | 🌙 Night    | Dark blue night sky |
+| 🌌 Space    | Nearly black with deep purple |
 
 ---
 
