@@ -81,20 +81,27 @@ func _physics_process(delta: float) -> void:
 func _on_landed() -> void:
 	# Default jump force
 	_jump_force = BASE_JUMP
-
+	var bonus_speed: float = 0.0
 	# Check what platform we landed on and get its jump force
 	for i in get_slide_collision_count():
 		var col := get_slide_collision(i)
-		# Normal pointing UP means floor (negative y in Godot)
-		if col.get_normal().y < -0.5:
+		if col.get_normal().y < -0.5: # Normal pointing UP means floor (negative y in Godot)
 			var body := col.get_collider()
 			if body != null and body.is_in_group("platform"):
 				_jump_force = body.jump_force
 				body.on_player_landed()
+				if body.platform_type == Platform.PlatformType.SPEED:
+					bonus_speed = 180.0
 			break
+				
+	if GameManager.sfx_enabled:
+		_jump_sfx.volume_db = GameManager.sfx_volume
+		_jump_sfx.play()
 
-	# Launch upward!
-	_jump_sfx.play()
+	if bonus_speed > 0.0:
+		var dir:float = sign(velocity.x) if velocity.x != 0 else 1.0
+		velocity.x += dir * bonus_speed
+	
 	velocity.y = _jump_force
 
 # ── Draw Character ─────────────────────────────────────────

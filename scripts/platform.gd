@@ -38,7 +38,7 @@ const JUMP_FORCES: Array = [
 	-780.0,    # NORMAL
 	-1100.0,   # BOOST   (big boost!)
 	-740.0,    # BREAKABLE (slightly weaker)
-	-820.0,    # SPEED
+	-880.0,    # SPEED
 ]
 
 var _broken := false

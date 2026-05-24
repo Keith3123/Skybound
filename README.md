@@ -22,14 +22,21 @@ Skybound/
 │   ├── main_menu.gd           ← Title screen
 │   └── game_over.gd           ← Game over screen
 │
-└── scenes/
-    ├── main_menu.tscn
-    ├── game.tscn
-    ├── game_over.tscn
-    ├── player.tscn
-    ├── platform.tscn
-    ├── coin.tscn
-    └── cloud.tscn
+├── scenes/
+│   ├── main_menu.tscn
+│   ├── game.tscn
+│   ├── game_over.tscn
+│   ├── player.tscn
+│   ├── platform.tscn
+│   ├── coin.tscn
+│   └── cloud.tscn
+│
+└── sounds/
+	├── game.mp3                ← Background music (gameplay)
+	├── 369515__lefty_studios__jumping-sfx.wav   ← Jump sound
+	├── 336933__the-sacha-rush__coin4.wav        ← Coin collect sound
+	├── 172204__leszek_szary__menu-button.wav    ← Button click sound
+	└── 412168__poligonstudio__arcade-game-over.wav  ← Game over sound
 ```
 
 ---
@@ -49,10 +56,10 @@ Skybound/
 
 ## 🎮 Controls
 
-| Action      | Key              |
-|-------------|------------------|
-| Move Left   | ← Arrow  or  A   |
-| Move Right  | → Arrow  or  D   |
+| Action      | Key        |
+|-------------|------------|
+| Move Left   | ← Arrow    |
+| Move Right  | → Arrow    |
 | Jump        | **Automatic** — happens when you land on a platform |
 
 ---
@@ -64,7 +71,7 @@ Skybound/
 | 🟩 Green | Normal   | Standard jump                   |
 | 🟦 Blue  | Boost    | Much higher jump!               |
 | 🟥 Red   | Breakable| Breaks after you land on it     |
-| 🟨 Yellow| Speed    | Slightly bouncier jump          |
+| 🟨 Yellow| Speed    | Sideways speed dash in the direction you are moving |
 
 ---
 
@@ -87,6 +94,36 @@ Skybound/
 
 ---
 
+## 🎵 Audio
+| Sound       | When it Plays      |
+|-------------|--------------------|
+| Background Music | Plays on the Main Menu screen |
+| Jump SFX  	   | Every time the player lands on a platform |
+| Coin SFX  	   | When the player collects a coin |
+| Button SFX       | When clicking any menu button |
+| Game Over SFX    | When the game over screen appears |
+
+---
+
+## 🌅 Background Themes
+| Theme       |Look |
+|-------------|----------------|
+| ☀️ Day Sky  | Clear blue sky |
+| 🌅 Sunset   | Orange and purple sky |
+| 🌙 Night    | Dark blue night sky |
+
+---
+
+## ⏸️ Menu Button
+Press the ☰ button during gameplay to open the menu:
+ ▶ Resume — continue the game
+ ↺ Retry — restart from the beginning
+ ⌂ Home — go back to the Main Menu
+🔊 Music Volume — adjust the background music volume
+🎵 Sound Effects — toggle SFX on or off
+
+---
+
 ## 💡 Tips for Beginners
 
 - All visual drawing uses Godot's built-in `_draw()` method
@@ -99,7 +136,7 @@ Skybound/
 
 ## 🛠️ Godot Version
 
-Built for **Godot 4.1+** using GDScript 2.0 syntax.
+Built for **Godot 4.6.2 using GDScript 2.0 syntax.
 
 If you get errors on older Godot versions, update to 4.1 or later.
 

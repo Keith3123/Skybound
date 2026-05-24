@@ -71,6 +71,8 @@ func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		GameManager.collect_coin()
 		visible = false     # <- hide the coin
+		if GameManager.sfx_enabled:
+			_sfx.volume_db = GameManager.sfx_volume
 		_sfx.play()			# <- play sound
 		await _sfx.finished  # <- wait to finished the sound
 		queue_free()         # <- then remove
