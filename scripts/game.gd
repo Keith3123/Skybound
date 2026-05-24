@@ -15,6 +15,9 @@ const PLAYER_SCENE   := preload("res://scenes/player.tscn")
 const PLATFORM_SCENE := preload("res://scenes/platform.tscn")
 const COIN_SCENE     := preload("res://scenes/coin.tscn")
 const CLOUD_SCENE    := preload("res://scenes/cloud.tscn")
+const METEOR_SCENE   := preload("res://scenes/meteor.tscn")
+const BIRD_SCENE     := preload("res://scenes/flying_bird.tscn")
+const STAR_SCENE     := preload("res://scenes/falling_star.tscn")
 
 # ── Screen / World Constants ───────────────────────────────
 const SW: float = 480.0    # Screen width
@@ -40,12 +43,14 @@ var coin_label:  Label
 var _platforms:  Node2D   # Container for all platform nodes
 var _coins:      Node2D   # Container for all coin nodes
 var _clouds:     Node2D   # Container for cloud nodes
+var _obstacles:  Node2D   # Container for obstacle nodes
 
 # ── Game State ─────────────────────────────────────────────
 var _active:          bool  = false
 var _last_plat_y:     float = 0.0   # Y of highest spawned platform
 var _last_plat_x: 	  float = 240.0 
 var _bg_music:  	  AudioStreamPlayer
+var _moving_platform: Platform  # Only one platform moves at a time
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
@@ -81,6 +86,8 @@ func _process(delta: float) -> void:
 	_move_camera(delta)
 	_tick_platform_spawner()
 	_tick_cloud_spawner()
+	_tick_obstacle_spawner()
+	_ensure_moving_platform()  # Keep exactly 1 platform moving
 	_despawn_old_objects()
 	_check_game_over()
 
@@ -119,9 +126,11 @@ func _build_containers() -> void:
 	_clouds = Node2D.new();    _clouds.name   = "Clouds";    _clouds.z_index    = -4
 	_platforms = Node2D.new(); _platforms.name = "Platforms"; _platforms.z_index = 0
 	_coins = Node2D.new();     _coins.name    = "Coins";     _coins.z_index     = 1
+	_obstacles = Node2D.new();  _obstacles.name = "Obstacles"; _obstacles.z_index = 1
 	add_child(_clouds)
 	add_child(_platforms)
 	add_child(_coins)
+	add_child(_obstacles)
 
 # ── Camera ─────────────────────────────────────────────────
 func _build_camera() -> void:
@@ -159,13 +168,13 @@ func _build_ui() -> void:
 	layer.add_child(coin_label)
 	
 	# Menu button (right side, below score info) - small hamburger menu icon
-	var menu_btn = Button.new()
+	var menu_btn: Button = Button.new()
 	menu_btn.text = "☰"
 	menu_btn.position = Vector2(SW - 60, 65)
 	menu_btn.custom_minimum_size = Vector2(50, 50)
 	menu_btn.add_theme_font_size_override("font_size", 32)
 	menu_btn.add_theme_color_override("font_color", Color.WHITE)
-	var btn_style = StyleBoxFlat.new()
+	var btn_style: StyleBoxFlat = StyleBoxFlat.new()
 	btn_style.bg_color = Color(0.2, 0.2, 0.2, 0.6)
 	btn_style.corner_radius_top_left = 8
 	btn_style.corner_radius_top_right = 8
@@ -233,15 +242,16 @@ func _spawn_next_platform() -> void:
 	_place_platform(Vector2(x, y), ptype, width)
 	_last_plat_y = y
 	_last_plat_x = x
-	# ~30 % chance to put a coin above this platform
-	if randf() < 0.30:
-		_spawn_coin(Vector2(x + randf_range(-18.0, 18.0), y - 40.0))
 
 func _place_platform(pos: Vector2, ptype: int, width: float) -> void:
 	var p := PLATFORM_SCENE.instantiate() as Platform
 	_platforms.add_child(p)
 	p.global_position = pos
 	p.setup(ptype, width)
+	
+	# ~30 % chance to put a coin above this platform
+	if randf() < 0.30:
+		_spawn_coin(Vector2(pos.x + randf_range(-18.0, 18.0), pos.y - 40.0))
 
 func _spawn_coin(pos: Vector2) -> void:
 	var c := COIN_SCENE.instantiate()
@@ -261,6 +271,32 @@ func _spawn_cloud(pos: Vector2) -> void:
 	var c := CLOUD_SCENE.instantiate()
 	_clouds.add_child(c)
 	c.global_position = pos
+
+# ── Ensure One Moving Platform ─────────────────────────────
+func _ensure_moving_platform() -> void:
+	"""Ensure exactly 1 platform visible on screen is always moving."""
+	# Check if current moving platform is still valid and visible
+	if _moving_platform and is_instance_valid(_moving_platform):
+		var dist_to_camera: float = abs(_moving_platform.global_position.y - camera.global_position.y)
+		if dist_to_camera < SH * 0.6:  # Still on screen
+			return  # Keep current one moving
+		else:
+			_moving_platform.is_moving = false  # Stop old one
+
+	# Current platform is gone or off-screen, pick a new visible one
+	var visible_platforms: Array = []
+	for plat in _platforms.get_children():
+		if is_instance_valid(plat):
+			var dist: float = abs(plat.global_position.y - camera.global_position.y)
+			if dist < SH * 0.6:  # On screen
+				visible_platforms.append(plat)
+
+	if visible_platforms.size() > 0:
+		# Pick random visible platform and enable movement
+		if _moving_platform:
+			_moving_platform.is_moving = false  # Stop old one
+		_moving_platform = visible_platforms[randi() % visible_platforms.size()]
+		_moving_platform.enable_movement()
 
 # ── Camera Movement ────────────────────────────────────────
 func _move_camera(delta: float) -> void:
@@ -286,6 +322,9 @@ func _despawn_old_objects() -> void:
 
 	for node in _platforms.get_children():
 		if node.global_position.y > limit_y:
+			# Clear moving platform reference if it's being despawned
+			if node == _moving_platform:
+				_moving_platform = null
 			node.queue_free()
 
 	for node in _coins.get_children():
@@ -296,7 +335,9 @@ func _despawn_old_objects() -> void:
 		if node.global_position.y > limit_y + 150:
 			node.queue_free()
 
-# ── Game Over ──────────────────────────────────────────────
+	for node in _obstacles.get_children():
+		if node.global_position.y > limit_y:
+			node.queue_free()
 func _check_game_over() -> void:
 	var fall_limit := camera.global_position.y + SH / 2.0 + 80.0
 	if player.global_position.y > fall_limit:
@@ -560,3 +601,39 @@ func _make_menu_button(text: String) -> Button:
 	btn.add_theme_font_size_override("font_size", 20)
 	btn.add_theme_color_override("font_color", Color.WHITE)
 	return btn
+
+# ── Obstacle Spawner ───────────────────────────────────────
+func _tick_obstacle_spawner() -> void:
+	# Only spawn obstacles if score >= 3000
+	if GameManager.score < 3000:
+		return
+	
+	# Spawn obstacles more frequently as score increases
+	var obstacle_chance := clampf(float(GameManager.score - 3000) / 3000.0, 0.0, 0.05)
+	if randf() < obstacle_chance:
+		if GameManager.current_theme == 1:
+			# Birds spawn from both left and right sides
+			var spawn_y = camera.global_position.y + randf_range(-SH * 0.3, SH * 0.3)
+			# Left side bird
+			_spawn_obstacle(Vector2(-30.0, spawn_y))
+			# Right side bird
+			_spawn_obstacle(Vector2(SW + 30.0, spawn_y))
+		else:
+			# Other obstacles spawn from above
+			var top_y := camera.global_position.y - SH / 2.0 - 50.0
+			_spawn_obstacle(Vector2(randf_range(50.0, SW - 50.0), top_y))
+
+func _spawn_obstacle(pos: Vector2) -> void:
+	var obstacle
+	match GameManager.current_theme:
+		0:
+			obstacle = METEOR_SCENE.instantiate()
+		1:
+			obstacle = BIRD_SCENE.instantiate()
+		2:
+			obstacle = STAR_SCENE.instantiate()
+		_:
+			return
+
+	_obstacles.add_child(obstacle)
+	obstacle.global_position = pos

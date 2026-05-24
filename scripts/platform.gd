@@ -44,9 +44,17 @@ const JUMP_FORCES: Array = [
 var _broken := false
 var _col_node: CollisionShape2D  # Reference for disabling on break
 
+# ── Platform Movement ──────────────────────────────
+var is_moving := false
+var move_speed: float = 100.0      # Oscillation speed
+var move_range: float = 60.0       # Pixels left/right
+var _start_x: float = 0.0
+var _move_time: float = 0.0
+
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	add_to_group("platform")
+	_start_x = global_position.x
 
 	# Build collision shape in code
 	_col_node = CollisionShape2D.new()
@@ -55,6 +63,16 @@ func _ready() -> void:
 	_col_node.shape = rect
 	_col_node.name = "Col"
 	add_child(_col_node)
+
+func _process(delta: float) -> void:
+	if is_moving:
+		_move_time += delta
+		global_position.x = _start_x + sin(_move_time * move_speed * 0.01) * move_range
+
+func enable_movement() -> void:
+	is_moving = true
+	_start_x = global_position.x
+	_move_time = 0.0
 
 ## Call this after add_child() to configure the platform.
 func setup(type: int, width: float = 90.0) -> void:

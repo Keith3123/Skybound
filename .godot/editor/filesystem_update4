@@ -1,8 +1,12 @@
-res://scenes/main_menu.tscn
 res://scripts/game.gd
-res://scripts/platform.gd
+res://scripts/falling_star.gd
+res://scripts/hot_air_balloon.gd
+res://scripts/meteor.gd
 res://scripts/player.gd
+res://scripts/platform.gd
+res://scripts/flying_bird.gd
 res://README.md
 res://autoload/game_manager.gd
 res://scripts/coin.gd
 res://scripts/main_menu.gd
+res://scenes/meteor.tscn
