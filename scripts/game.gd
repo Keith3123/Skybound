@@ -44,6 +44,7 @@ var _clouds:     Node2D   # Container for cloud nodes
 # ── Game State ─────────────────────────────────────────────
 var _active:          bool  = false
 var _last_plat_y:     float = 0.0   # Y of highest spawned platform
+var _bg_music:  	  AudioStreamPlayer
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
@@ -62,6 +63,12 @@ func _ready() -> void:
 		SW / 2.0,
 		player.global_position.y - SH * 0.14
 	)
+	
+	_bg_music = AudioStreamPlayer.new()
+	_bg_music.stream = load("res://sounds/game.mp3")
+	_bg_music.volume_db = -8.0
+	add_child(_bg_music)
+	_bg_music.play()
 
 	_active = true
 
@@ -265,6 +272,7 @@ func _end_game() -> void:
 	if not _active:
 		return
 	_active = false
+	_bg_music.stop()
 	player.die()
 	await get_tree().create_timer(0.9).timeout
 	GameManager.go_to("res://scenes/game_over.tscn")

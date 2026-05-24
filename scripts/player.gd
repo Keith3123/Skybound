@@ -16,11 +16,17 @@ var is_alive:      bool  = true
 var _jump_force:   float = BASE_JUMP  # May be changed by platform type
 var _prev_y:       float = 0.0        # For height-based scoring
 var _facing:       float = 1.0        # 1 = right, -1 = left (for eye drawing)
+var _jump_sfx: 	   AudioStreamPlayer
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	add_to_group("player")
 	_prev_y = global_position.y
+	
+	_jump_sfx = AudioStreamPlayer.new()
+	_jump_sfx.stream = load("res://sounds/369515__lefty_studios__jumping-sfx.wav")
+	_jump_sfx.volume_db = -5.0
+	add_child(_jump_sfx)
 
 	# ── Build collision shape in code (no need for scene editor) ──
 	var col := CollisionShape2D.new()
@@ -88,6 +94,7 @@ func _on_landed() -> void:
 			break
 
 	# Launch upward!
+	_jump_sfx.play()
 	velocity.y = _jump_force
 
 # ── Draw Character ─────────────────────────────────────────

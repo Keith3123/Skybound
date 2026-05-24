@@ -6,11 +6,23 @@ extends Control
 
 const SW := 480.0
 const SH := 854.0
+var _btn_sfx: AudioStreamPlayer
+var _bg_music: AudioStreamPlayer
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	# NOTE: Anchors are already set in main_menu.tscn — no call needed here
+	_btn_sfx = AudioStreamPlayer.new()
+	_bg_music = AudioStreamPlayer.new()
+	_btn_sfx.stream = load("res://sounds/172204__leszek_szary__menu-button.wav")
+	_bg_music.stream = load("res://sounds/game.mp3")
+	_btn_sfx.volume_db = 0.0
+	_bg_music.volume_db = -8.0
+	add_child(_btn_sfx)
+	add_child(_bg_music)
+	_bg_music.play()
 	_build_ui()
+	
 
 # ── Background (drawn via _draw) ───────────────────────────
 func _draw() -> void:
@@ -100,7 +112,11 @@ func _build_ui() -> void:
 
 	# ── Buttons ────────────────────────────────────────────
 	var play := _make_btn("▶   PLAY", Color(0.16, 0.72, 0.28))
-	play.pressed.connect(func(): GameManager.go_to("res://scenes/game.tscn"))
+	play.pressed.connect(func(): 
+		_btn_sfx.play()
+		_bg_music.stop()
+		await _btn_sfx.finished
+		GameManager.go_to("res://scenes/game.tscn"))
 	vbox.add_child(play)
 
 	# Controls hint
@@ -112,7 +128,11 @@ func _build_ui() -> void:
 	vbox.add_child(hint)
 
 	var exit_btn := _make_btn("✕   EXIT", Color(0.72, 0.18, 0.18))
-	exit_btn.pressed.connect(func(): get_tree().quit())
+	exit_btn.pressed.connect(func(): 
+		_btn_sfx.play()
+		_bg_music.stop()
+		await _btn_sfx.finished
+		get_tree().quit())
 	vbox.add_child(exit_btn)
 
 # ── Helper: Styled Button ──────────────────────────────────
