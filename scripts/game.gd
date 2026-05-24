@@ -50,6 +50,7 @@ var _bg_music:  	  AudioStreamPlayer
 func _ready() -> void:
 	GameManager.reset()
 	GameManager.score_updated.connect(_on_score_updated)
+	GameManager.theme_changed.connect(_on_theme_changed)
 
 	_build_background()
 	_build_containers()
@@ -65,9 +66,10 @@ func _ready() -> void:
 	)
 	
 	_bg_music = AudioStreamPlayer.new()
-	_bg_music.stream = load("res://sounds/game.mp3")
 	_bg_music.volume_db = -8.0
+	_bg_music.stream = load("res://sounds/game.mp3")
 	add_child(_bg_music)
+	_change_music(GameManager.current_theme)
 	_bg_music.play()
 
 	_active = true
@@ -82,25 +84,30 @@ func _process(delta: float) -> void:
 	_check_game_over()
 
 # ── Background ─────────────────────────────────────────────
+var _bg_top: ColorRect    # Top half of background
+var _bg_bot: ColorRect    # Bottom half of background
+var _bg_layer: CanvasLayer  # Background layer reference
+
 func _build_background() -> void:
 	# CanvasLayer with layer = -10 means it's ALWAYS behind everything
 	# and does NOT move with the game camera.
-	var layer := CanvasLayer.new()
-	layer.layer = -10
-	add_child(layer)
+	_bg_layer = CanvasLayer.new()
+	_bg_layer.layer = -10
+	add_child(_bg_layer)
 
-	# Top half  — deeper blue
-	var top := ColorRect.new()
-	top.color = Color(0.10, 0.32, 0.72)
-	top.size  = Vector2(SW, SH * 0.52)
-	layer.add_child(top)
+	# Top half
+	_bg_top = ColorRect.new()
+	_bg_top.size  = Vector2(SW, SH * 0.52)
+	_bg_layer.add_child(_bg_top)
 
-	# Bottom half — lighter sky blue
-	var bot := ColorRect.new()
-	bot.color    = Color(0.40, 0.72, 0.98)
-	bot.size     = Vector2(SW, SH * 0.52)
-	bot.position = Vector2(0, SH * 0.48)
-	layer.add_child(bot)
+	# Bottom half
+	_bg_bot = ColorRect.new()
+	_bg_bot.size     = Vector2(SW, SH * 0.52)
+	_bg_bot.position = Vector2(0, SH * 0.48)
+	_bg_layer.add_child(_bg_bot)
+	
+	# Apply initial theme (theme 0)
+	_apply_theme_colors(GameManager.current_theme)
 
 # ── Scene Containers ───────────────────────────────────────
 func _build_containers() -> void:
@@ -145,6 +152,24 @@ func _build_ui() -> void:
 	# Coin counter (below score)
 	coin_label = _make_label("🪙 0", Vector2(14, 44), 20, Color(1.0, 0.88, 0.2))
 	layer.add_child(coin_label)
+	
+	# Menu button (right side, below score info) - small hamburger menu icon
+	var menu_btn = Button.new()
+	menu_btn.text = "☰"
+	menu_btn.position = Vector2(SW - 60, 65)
+	menu_btn.custom_minimum_size = Vector2(50, 50)
+	menu_btn.add_theme_font_size_override("font_size", 32)
+	menu_btn.add_theme_color_override("font_color", Color.WHITE)
+	var btn_style = StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.2, 0.2, 0.2, 0.6)
+	btn_style.corner_radius_top_left = 8
+	btn_style.corner_radius_top_right = 8
+	btn_style.corner_radius_bottom_left = 8
+	btn_style.corner_radius_bottom_right = 8
+	menu_btn.add_theme_stylebox_override("normal", btn_style)
+	menu_btn.pressed.connect(func():
+		_show_in_game_menu())
+	layer.add_child(menu_btn)
 
 	_on_score_updated(0)   # Prime the labels with starting values
 
@@ -316,3 +341,187 @@ func _on_score_updated(new_score: int) -> void:
 		hs_label.text = "Best: %d" % GameManager.high_score
 	if coin_label:
 		coin_label.text = "🪙 %d" % GameManager.coins_collected
+
+func _on_theme_changed(theme: int) -> void:
+	"""Called when the player advances to a new theme (every 5 coins)."""
+	_apply_theme_colors(theme)
+	_change_music(theme)
+
+func _apply_theme_colors(theme: int) -> void:
+	"""Update background colors based on theme number."""
+	match theme:
+		# Theme 0: Clear Sky — light blue with gradient
+		0:
+			_bg_top.color = Color(0.10, 0.32, 0.72)    # Deep blue
+			_bg_bot.color = Color(0.40, 0.72, 0.98)    # Light sky blue
+		
+		# Theme 1: Sunset Sky — orange/purple gradient
+		1:
+			_bg_top.color = Color(0.72, 0.25, 0.55)    # Purple
+			_bg_bot.color = Color(1.00, 0.65, 0.30)    # Orange
+		
+		# Theme 2: Night Sky — dark with blue tones
+		2:
+			_bg_top.color = Color(0.05, 0.08, 0.25)    # Very dark blue
+			_bg_bot.color = Color(0.15, 0.15, 0.40)    # Dark blue
+		
+		# Theme 3: Space Sky — black with nebula
+		3:
+			_bg_top.color = Color(0.02, 0.01, 0.08)    # Almost black
+			_bg_bot.color = Color(0.05, 0.02, 0.15)    # Dark purple
+
+func _change_music(theme: int) -> void:
+	"""Adjust music volume based on theme (no stream reload needed)."""
+	if not _bg_music:
+		return
+	
+	# Only adjust volume per theme — no need to reload the stream
+	# since all themes currently use the same music file
+	match theme:
+		0:  # Clear Sky
+			_bg_music.volume_db = -8.0
+		1:  # Sunset
+			_bg_music.volume_db = -8.5
+		2:  # Night
+			_bg_music.volume_db = -9.0
+		3:  # Space
+			_bg_music.volume_db = -8.0
+
+# ── In-Game Menu Panel ────────────────────────────────────
+func _show_in_game_menu() -> void:
+	"""Display the in-game menu with retry, home, and music volume options."""
+	if not _active:
+		return
+	
+	_active = false  # Pause the game
+	
+	# Dark overlay
+	var overlay := ColorRect.new()
+	overlay.color = Color(0.0, 0.0, 0.0, 0.65)
+	overlay.size = Vector2(SW, SH)
+	var hud_layer = get_node("HUD") as CanvasLayer
+	hud_layer.add_child(overlay)
+	
+	# Menu card
+	var card := PanelContainer.new()
+	card.position = Vector2(60, 200)
+	card.size = Vector2(360, 450)
+	
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.95)
+	card_style.corner_radius_top_left = 20
+	card_style.corner_radius_top_right = 20
+	card_style.corner_radius_bottom_left = 20
+	card_style.corner_radius_bottom_right = 20
+	card_style.border_width_left = 2
+	card_style.border_width_right = 2
+	card_style.border_width_top = 2
+	card_style.border_width_bottom = 2
+	card_style.border_color = Color(0.30, 0.55, 1.0, 0.45)
+	card.add_theme_stylebox_override("panel", card_style)
+	hud_layer.add_child(card)
+	
+	# Margin
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	card.add_child(margin)
+	
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 16)
+	margin.add_child(vbox)
+	
+	# Title
+	var title := Label.new()
+	title.text = "MENU"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 40)
+	title.add_theme_color_override("font_color", Color.WHITE)
+	vbox.add_child(title)
+	
+	# Music Volume Section
+	var vol_label := Label.new()
+	vol_label.text = "🔊  Music Volume"
+	vol_label.add_theme_font_size_override("font_size", 18)
+	vol_label.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0))
+	vbox.add_child(vol_label)
+	
+	var slider := HSlider.new()
+	slider.min_value = -40.0
+	slider.max_value = 0.0
+	slider.value = _bg_music.volume_db
+	slider.custom_minimum_size = Vector2(320, 28)
+	slider.value_changed.connect(func(val):
+		_bg_music.volume_db = val)
+	vbox.add_child(slider)
+	
+	var vol_value := Label.new()
+	vol_value.text = "%.1f dB" % _bg_music.volume_db
+	vol_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vol_value.add_theme_font_size_override("font_size", 14)
+	vol_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
+	slider.value_changed.connect(func(val):
+		vol_value.text = "%.1f dB" % val)
+	vbox.add_child(vol_value)
+	
+	# Spacer
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 12)
+	vbox.add_child(spacer)
+	
+	# Retry button
+	var retry_btn := _make_menu_button("↻  RETRY")
+	retry_btn.pressed.connect(func():
+		overlay.queue_free()
+		card.queue_free()
+		GameManager.go_to("res://scenes/game.tscn"))
+	vbox.add_child(retry_btn)
+	
+	# Home button
+	var home_btn := _make_menu_button("⌂  HOME")
+	home_btn.pressed.connect(func():
+		overlay.queue_free()
+		card.queue_free()
+		_bg_music.stop()
+		GameManager.go_to("res://scenes/main_menu.tscn"))
+	vbox.add_child(home_btn)
+	
+	# Resume button
+	var resume_btn := _make_menu_button("▶  RESUME")
+	resume_btn.pressed.connect(func():
+		overlay.queue_free()
+		card.queue_free()
+		_active = true)
+	vbox.add_child(resume_btn)
+
+func _make_menu_button(text: String) -> Button:
+	"""Create a styled menu button for in-game menu."""
+	var btn := Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(320, 54)
+	
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.35, 0.55, 0.85)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 15
+	style.content_margin_right = 15
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	btn.add_theme_stylebox_override("normal", style)
+	
+	var hover := style.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.45, 0.65, 0.95)
+	btn.add_theme_stylebox_override("hover", hover)
+	
+	var pressed := style.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.25, 0.45, 0.75)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	
+	btn.add_theme_font_size_override("font_size", 20)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	return btn
