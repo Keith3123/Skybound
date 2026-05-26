@@ -18,6 +18,14 @@ var _prev_y:       float = 0.0        # For height-based scoring
 var _facing:       float = 1.0        # 1 = right, -1 = left (for eye drawing)
 var _jump_sfx: 	   AudioStreamPlayer
 
+# ── Shield ─────────────────────────────────────────────────
+var shield_up: bool = false    # UP arrow held — blocks falling obstacles
+var shield_side: bool = false  # SPACE/CTRL held — blocks side obstacles
+#var _shield_timer: float = 0.0
+#var _shield_cooldown: float = 0.0
+#const SHIELD_DURATION: float = 1.5 # seconds active
+#const SHIELD_COOLDOWN: float = 3.5 # seconds recharge
+
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	add_to_group("player")
@@ -77,6 +85,36 @@ func _physics_process(delta: float) -> void:
 		GameManager.add_score(int((_prev_y - global_position.y) * 0.18))
 		_prev_y = global_position.y
 
+# ── Shield ────────────────────────────── 
+func _process(_delta: float) -> void:
+	if not is_alive:
+		return
+	# Shield is active ONLY while key is held — release = disappears
+	var new_up := Input.is_action_pressed("ui_up")
+	var new_side := Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_CTRL)
+	if new_up != shield_up or new_side != shield_side:
+		shield_up = new_up
+		shield_side = new_side
+		queue_redraw()
+		
+# ── Shield Activation (SPACE key) ───────────────────
+#func _input(event: InputEvent) -> void:
+	#if not is_alive:
+		#return
+	#if event is InputEventKey:
+		#if event.keycode == KEY_SPACE and not event.echo:
+			#if _shield_cooldown <= 0.0 and not shield_active:
+				#shield_active = true
+				#_shield_timer = SHIELD_DURATION
+				#_shield_cooldown = SHIELD_COOLDOWN
+				#queue_redraw()
+				
+# ── Shield Hit Flash ────────────────────────────────
+func _flash_shield() -> void:
+	var tw := create_tween()
+	tw.tween_property(self, "modulate", Color(05, 0.95, 1.0, 1.0), 0.05)
+	tw.tween_property(self, "modulate", Color.WHITE, 0.20)
+	
 # ── Landing / Jump ─────────────────────────────────────────
 func _on_landed() -> void:
 	# Default jump force
@@ -156,6 +194,31 @@ func _draw() -> void:
 	# ── OUTLINE on body ──
 	draw_rect(Rect2(-11, -10, 22, 24), body_col.darkened(0.3), false, 1.5)
 
+#  ── TOP SHIELD (↑ Up Arrow) — blocks meteors & stars ──
+	if shield_up:
+		var sc := Color(0.20, 0.78, 1.0)
+		# Outer glow
+		draw_arc(Vector2(0, -14), 38, PI, TAU, 36, Color(sc.r, sc.g, sc.b, 0.12), 14.0)
+		# Main shield arc
+		draw_arc(Vector2(0, -14), 33, PI, TAU, 36, sc, 5.0)
+		# Inner highlight
+		draw_arc(Vector2(0, -14), 27, PI + 0.2, TAU - 0.2, 30, Color(0.75, 0.97, 1.0, 0.55), 2.0)
+		# Handle (small line from center to arc base)
+		draw_line(Vector2(-33, -14), Vector2(-33, 8), sc, 3.0)
+		draw_line(Vector2( 33, -14), Vector2( 33, 8), sc, 3.0)
+
+	# ── SIDE SHIELDS (Space / Ctrl) — blocks birds ──
+	if shield_side:
+		var sc := Color(1.0, 0.72, 0.15)
+		# Left shield
+		draw_arc(Vector2(-14, -8), 30, PI * 0.5,  PI * 1.5, 28, Color(sc.r, sc.g, sc.b, 0.12), 14.0)
+		draw_arc(Vector2(-14, -8), 26, PI * 0.5,  PI * 1.5, 28, sc, 5.0)
+		draw_arc(Vector2(-14, -8), 21, PI * 0.55, PI * 1.45, 24, Color(1.0, 0.95, 0.6, 0.5), 2.0)
+		# Right shield
+		draw_arc(Vector2(14, -8), 30, -PI * 0.5, PI * 0.5, 28, Color(sc.r, sc.g, sc.b, 0.12), 14.0)
+		draw_arc(Vector2(14, -8), 26, -PI * 0.5, PI * 0.5, 28, sc, 5.0)
+		draw_arc(Vector2(14, -8), 21, -PI * 0.45, PI * 0.45, 24, Color(1.0, 0.95, 0.6, 0.5), 2.0)
+		
 # ── Death ──────────────────────────────────────────────────
 func die() -> void:
 	if not is_alive:

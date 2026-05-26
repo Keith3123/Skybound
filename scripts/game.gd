@@ -51,6 +51,7 @@ var _last_plat_y:     float = 0.0   # Y of highest spawned platform
 var _last_plat_x: 	  float = 240.0 
 var _bg_music:  	  AudioStreamPlayer
 var _moving_platform: Platform  # Only one platform moves at a time
+var _gameover_sfx: AudioStreamPlayer
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
@@ -72,10 +73,15 @@ func _ready() -> void:
 	)
 	
 	_bg_music = AudioStreamPlayer.new()
+	_gameover_sfx = AudioStreamPlayer.new()
 	_bg_music.volume_db = -8.0
 	_bg_music.stream = load("res://sounds/game.mp3")
+	_gameover_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
 	add_child(_bg_music)
-	_change_music(GameManager.current_theme)
+	add_child(_gameover_sfx)
+	#
+	if _bg_music.stream is AudioStreamMP3:
+		(_bg_music.stream as AudioStreamMP3).loop = true
 	_bg_music.play()
 
 	_active = true
@@ -87,7 +93,7 @@ func _process(delta: float) -> void:
 	_tick_platform_spawner()
 	_tick_cloud_spawner()
 	_tick_obstacle_spawner()
-	_ensure_moving_platform()  # Keep exactly 1 platform moving
+	#_ensure_moving_platform()  # Keep exactly 1 platform moving
 	_despawn_old_objects()
 	_check_game_over()
 
@@ -249,6 +255,9 @@ func _place_platform(pos: Vector2, ptype: int, width: float) -> void:
 	p.global_position = pos
 	p.setup(ptype, width)
 	
+	if GameManager.score > 200 and randf() < 0.20:
+		p.enable_movement()
+		
 	# ~30 % chance to put a coin above this platform
 	if randf() < 0.30:
 		_spawn_coin(Vector2(pos.x + randf_range(-18.0, 18.0), pos.y - 40.0))
@@ -349,7 +358,9 @@ func _end_game() -> void:
 	_active = false
 	_bg_music.stop()
 	player.die()
-	await get_tree().create_timer(0.9).timeout
+	_gameover_sfx.volume_db = GameManager.sfx_volume
+	_gameover_sfx.play()
+	await get_tree().create_timer(1.5).timeout
 	GameManager.go_to("res://scenes/game_over.tscn")
 
 # ── Difficulty ─────────────────────────────────────────────
@@ -427,15 +438,16 @@ func _change_music(theme: int) -> void:
 	
 	# Only adjust volume per theme — no need to reload the stream
 	# since all themes currently use the same music file
-	match theme:
-		0:  # Clear Sky
-			_bg_music.volume_db = -8.0
-		1:  # Sunset
-			_bg_music.volume_db = -8.5
-		2:  # Night
-			_bg_music.volume_db = -9.0
-		3:  # Space
-			_bg_music.volume_db = -8.0
+	#match theme:
+		#0:  # Clear Sky
+			#_bg_music.volume_db = -8.0
+		#1:  # Sunset
+			#_bg_music.volume_db = -8.5
+		#2:  # Night
+			#_bg_music.volume_db = -9.0
+		#3:  # Space
+			#_bg_music.volume_db = -8.0
+	pass 
 # ── In-Game Menu Panel ────────────────────────────────────
 func _show_in_game_menu() -> void:
 	"""Display the in-game menu with retry, home, and music volume options."""
@@ -443,6 +455,7 @@ func _show_in_game_menu() -> void:
 		return
 	
 	_active = false  # Pause the game
+	_bg_music.stream_paused = true # ← PAUSE music when menu opens
 	
 	# Dark overlay
 	var overlay := ColorRect.new()
@@ -569,6 +582,7 @@ func _show_in_game_menu() -> void:
 	resume_btn.pressed.connect(func():
 		overlay.queue_free()
 		card.queue_free()
+		_bg_music.stream_paused = false # Resume Music
 		_active = true)
 	vbox.add_child(resume_btn)
 
@@ -604,12 +618,12 @@ func _make_menu_button(text: String) -> Button:
 
 # ── Obstacle Spawner ───────────────────────────────────────
 func _tick_obstacle_spawner() -> void:
-	# Only spawn obstacles if score >= 3000
-	if GameManager.score < 3000:
+	# Only spawn obstacles if score >= 1000
+	if GameManager.score < 300:
 		return
 	
 	# Spawn obstacles more frequently as score increases
-	var obstacle_chance := clampf(float(GameManager.score - 3000) / 3000.0, 0.0, 0.05)
+	var obstacle_chance := clampf(float(GameManager.score - 300) / 300.0, 0.0, 0.05)
 	if randf() < obstacle_chance:
 		if GameManager.current_theme == 1:
 			# Birds spawn from both left and right sides

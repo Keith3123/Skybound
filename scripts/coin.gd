@@ -3,7 +3,7 @@ extends Area2D
 ## ============================================================
 ##  Coin.gd
 ##  Collectible gold coin. Bobs up and down gently.
-##  Gives the player +50 points when collected.
+##  Gives the player +5 points when collected.
 ## ============================================================
 
 var _time:     float = 0.0

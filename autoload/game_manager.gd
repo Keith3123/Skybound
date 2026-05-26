@@ -40,10 +40,10 @@ func add_score(points: int) -> void:
 	if new_theme > old_theme:
 		_advance_theme()
 
-## Called when the player collects a coin (+50 pts).
+## Called when the player collects a coin (+5 pts).
 func collect_coin() -> void:
 	coins_collected += 1
-	add_score(50)
+	add_score(5)
 
 ## Reset score, coins, and theme for a new game session.
 func reset() -> void:

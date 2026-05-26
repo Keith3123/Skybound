@@ -125,16 +125,11 @@ func _draw() -> void:
 				draw_line(Vector2(-hw * 0.1,   0),  Vector2( hw * 0.3,    0), Color(0.55, 0.10, 0.10, 0.50), 1.0)
 
 		PlatformType.SPEED:
-			# Lightning bolt in the center
-			var bolt := PackedVector2Array([
-				Vector2(-5.5, -hh + 2),
-				Vector2( 1.5, -1.5),
-				Vector2(-1.5, -1.5),
-				Vector2( 5.5,  hh - 2),
-				Vector2(-1.5,  1.5),
-				Vector2( 1.5,  1.5),
-			])
-			draw_colored_polygon(bolt, Color(1.0, 0.55, 0.0, 0.95))
+			# Use lines instead of polygon (no triangulation needed)
+			var lc := Color(1.0, 0.55, 0.0, 0.95)
+			draw_line(Vector2( 3, -hh + 2), Vector2(-2,  0), lc, 3.5)
+			draw_line(Vector2(-2,  0),      Vector2( 3,  hh - 2), lc, 3.5)
+			draw_circle(Vector2(0.5, 0), 2.5, Color(1.0, 0.85, 0.2, 0.85))
 
 	# Border outline
 	draw_rect(Rect2(-hw, -hh, plat_width, PLAT_HEIGHT), col.darkened(0.35), false, 1.5)

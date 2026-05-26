@@ -113,6 +113,7 @@ func _build_ui() -> void:
 	# ── Buttons ────────────────────────────────────────────
 	var play := _make_btn("▶   PLAY", Color(0.16, 0.72, 0.28))
 	play.pressed.connect(func(): 
+		_btn_sfx.volume_db = GameManager.sfx_volume
 		_btn_sfx.play()
 		_bg_music.stop()
 		await _btn_sfx.finished
@@ -121,12 +122,14 @@ func _build_ui() -> void:
 
 	var settings := _make_btn("⚙   SETTINGS", Color(0.35, 0.55, 0.85))
 	settings.pressed.connect(func():
+		_btn_sfx.volume_db = GameManager.sfx_volume
 		_btn_sfx.play()
 		_show_settings())
 	vbox.add_child(settings)
 
 	var exit_btn := _make_btn("✕   EXIT", Color(0.72, 0.18, 0.18))
 	exit_btn.pressed.connect(func(): 
+		_btn_sfx.volume_db = GameManager.sfx_volume
 		_btn_sfx.play()
 		_bg_music.stop()
 		await _btn_sfx.finished
@@ -178,8 +181,8 @@ func _show_settings() -> void:
 	
 	# Settings card
 	var card := PanelContainer.new()
-	card.position = Vector2(45, 150)
-	card.size = Vector2(390, 550)
+	card.position = Vector2(45, 70)
+	card.size = Vector2(390, 720)
 	
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.95)
@@ -281,10 +284,22 @@ func _show_settings() -> void:
 	vbox.add_child(ctrl_label)
 	
 	var ctrl_text := Label.new()
-	ctrl_text.text = "← → Arrow Keys / A D\nMove Left or Right"
+	ctrl_text.text = "← → Arrow Keys \nMove Left or Right"
 	ctrl_text.add_theme_font_size_override("font_size", 16)
 	ctrl_text.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
 	vbox.add_child(ctrl_text)
+	
+	var ctrl_text2 := Label.new()
+	ctrl_text2.text = "↑ Arrow Key (hold) \nShield Up" # for falling meteors and stars
+	ctrl_text2.add_theme_font_size_override("font_size", 16)
+	ctrl_text2.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
+	vbox.add_child(ctrl_text2)
+	
+	var ctrl_text3 := Label.new()
+	ctrl_text3.text = "Spacebar/ CTRL (hold) \nShield Sides" # for birds obstacle
+	ctrl_text3.add_theme_font_size_override("font_size", 16)
+	ctrl_text3.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
+	vbox.add_child(ctrl_text3)
 	
 	# Spacer
 	var spacer2 := Control.new()
@@ -294,6 +309,7 @@ func _show_settings() -> void:
 	# Close button
 	var close_btn := _make_btn("✕  CLOSE", Color(0.55, 0.35, 0.55))
 	close_btn.pressed.connect(func():
+		_btn_sfx.volume_db = GameManager.sfx_volume
 		_btn_sfx.play()
 		overlay.queue_free()
 		card.queue_free())

@@ -20,6 +20,9 @@ Skybound/
 │   ├── cloud.gd               ← Decorative clouds
 │   ├── game.gd                ← Main game loop
 │   ├── main_menu.gd           ← Title screen
+│   ├── falling_star.gd        ← Falling Star Obstacle 
+│   ├── flying_bird.gd         ← Flying Bird Obstacle
+│   ├── meteor.gd              ← Falling Meteor Obstacle
 │   └── game_over.gd           ← Game over screen
 │
 ├── scenes/
@@ -29,7 +32,10 @@ Skybound/
 │   ├── player.tscn
 │   ├── platform.tscn
 │   ├── coin.tscn
-│   └── cloud.tscn
+│   ├── cloud.tscn
+│   ├── falling_star.tscn
+│   ├── flying_bird.tscn
+│   └── meteor.tscn
 │
 └── sounds/
 	├── game.mp3                ← Background music (gameplay)
@@ -61,6 +67,8 @@ Skybound/
 | Move Left   | ← Arrow    |
 | Move Right  | → Arrow    |
 | Jump        | **Automatic** — happens when you land on a platform |
+| Shield Up   | ↑ Arrow (hold) — for falling meteors and stars |
+| Shield Sides | Space/ CTRL (hold) — for flying birds |
 
 ---
 
@@ -78,19 +86,8 @@ Skybound/
 ## 🪙 Scoring
 
 - **Height** — Score increases the higher you climb
-- **Coins** — Each coin gives **+50 points**
+- **Coins** — Each coin gives **+5 points**
 - **High Score** — Automatically saved between sessions
-
----
-
-## 📈 Difficulty Progression
-
-| Score Range | What Changes                        |
-|-------------|-------------------------------------|
-| 0 – 100     | Only normal green platforms         |
-| 100 – 350   | Blue boost platforms appear         |
-| 350 – 750   | Red & yellow platforms appear       |
-| 750+        | All types, larger gaps, hard mode!  |
 
 ---
 

@@ -15,7 +15,8 @@ func _ready() -> void:
 	_gameover_sfx.volume_db = 0.0
 	add_child(_btn_sfx)
 	add_child(_gameover_sfx)
-	_gameover_sfx.play()
+	_gameover_sfx.volume_db = GameManager.sfx_volume
+	#_gameover_sfx.play()
 	_build_background()
 	_build_ui()
 
@@ -100,6 +101,7 @@ func _build_ui() -> void:
 	# ── Buttons ────────────────────────────────────────────
 	var retry := _make_btn("↺   RETRY",      Color(0.14, 0.68, 0.26))
 	retry.pressed.connect(func(): 
+		_btn_sfx.volume_db = GameManager.sfx_volume
 		_btn_sfx.play()
 		await _btn_sfx.finished
 		GameManager.go_to("res://scenes/game.tscn"))
@@ -107,6 +109,7 @@ func _build_ui() -> void:
 
 	var menu := _make_btn("⌂   MAIN MENU", Color(0.22, 0.40, 0.82))
 	menu.pressed.connect(func(): 
+		_btn_sfx.volume_db = GameManager.sfx_volume
 		_btn_sfx.play()
 		await _btn_sfx.finished
 		GameManager.go_to("res://scenes/main_menu.tscn"))
