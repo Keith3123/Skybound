@@ -42,7 +42,8 @@ Skybound/
 	├── 369515__lefty_studios__jumping-sfx.wav   ← Jump sound
 	├── 336933__the-sacha-rush__coin4.wav        ← Coin collect sound
 	├── 172204__leszek_szary__menu-button.wav    ← Button click sound
-	└── 412168__poligonstudio__arcade-game-over.wav  ← Game over sound
+	├── gameover.mp3                             ← Game Over sound
+	└── 412168__poligonstudio__arcade-game-over.wav  ← Falling sound
 ```
 
 ---
@@ -98,6 +99,7 @@ Skybound/
 | Jump SFX  	   | Every time the player lands on a platform |
 | Coin SFX  	   | When the player collects a coin |
 | Button SFX       | When clicking any menu button |
+| Falling SFX      | When the player falls onto a platform |
 | Game Over SFX    | When the game over screen appears |
 
 ---
