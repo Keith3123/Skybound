@@ -133,7 +133,7 @@ func _on_landed() -> void:
 			break
 				
 	if GameManager.sfx_enabled:
-		_jump_sfx.volume_db = GameManager.sfx_volume
+		_jump_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 		_jump_sfx.play()
 
 	if bonus_speed > 0.0:

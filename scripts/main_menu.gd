@@ -17,8 +17,8 @@ func _ready() -> void:
 	_bg_music = AudioStreamPlayer.new()
 	_btn_sfx.stream = load("res://sounds/172204__leszek_szary__menu-button.wav")
 	_bg_music.stream = load("res://sounds/game.mp3")
-	_btn_sfx.volume_db = 0.0
-	_bg_music.volume_db = -8.0
+	_btn_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
+	_bg_music.volume_db = GameManager.vol_to_db(GameManager.music_volume)
 	add_child(_btn_sfx)
 	add_child(_bg_music)
 	_bg_music.play()
@@ -40,7 +40,7 @@ func _draw() -> void:
 	# Static decorative clouds
 	_draw_cloud(Vector2(55,  140), 85)
 	_draw_cloud(Vector2(340,  85), 68)
-	_draw_cloud(Vector2(190, 230), 95)
+	_draw_cloud(Vector2(190, 215), 95)
 	_draw_cloud(Vector2(415, 270), 55)
 	_draw_cloud(Vector2(20,  310), 70)
 
@@ -85,7 +85,7 @@ func _build_ui() -> void:
 	var sub := Label.new()
 	sub.text = "Endless Vertical Platformer"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 17)
+	sub.add_theme_font_size_override("font_size", 18)
 	sub.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0, 0.80))
 	vbox.add_child(sub)
 
@@ -113,7 +113,8 @@ func _build_ui() -> void:
 	# ── Buttons ────────────────────────────────────────────
 	var play := _make_btn("▶   PLAY", Color(0.16, 0.72, 0.28))
 	play.pressed.connect(func(): 
-		_btn_sfx.volume_db = GameManager.sfx_volume
+		#_btn_sfx.volume_db = GameManager.sfx_volume
+		_btn_sfx.stop()
 		_btn_sfx.play()
 		_bg_music.stop()
 		await _btn_sfx.finished
@@ -122,14 +123,14 @@ func _build_ui() -> void:
 
 	var settings := _make_btn("⚙   SETTINGS", Color(0.35, 0.55, 0.85))
 	settings.pressed.connect(func():
-		_btn_sfx.volume_db = GameManager.sfx_volume
+		_btn_sfx.stop()
 		_btn_sfx.play()
 		_show_settings())
 	vbox.add_child(settings)
 
 	var exit_btn := _make_btn("✕   EXIT", Color(0.72, 0.18, 0.18))
 	exit_btn.pressed.connect(func(): 
-		_btn_sfx.volume_db = GameManager.sfx_volume
+		_btn_sfx.stop()
 		_btn_sfx.play()
 		_bg_music.stop()
 		await _btn_sfx.finished
@@ -181,8 +182,8 @@ func _show_settings() -> void:
 	
 	# Settings card
 	var card := PanelContainer.new()
-	card.position = Vector2(45, 70)
-	card.size = Vector2(390, 720)
+	card.position = Vector2(45, 50)
+	card.size = Vector2(390, 740)
 	
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.95)
@@ -200,14 +201,20 @@ func _show_settings() -> void:
 	
 	# Margin inside card
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 25)
-	margin.add_theme_constant_override("margin_right", 25)
-	margin.add_theme_constant_override("margin_top", 25)
-	margin.add_theme_constant_override("margin_bottom", 25)
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_top", 22)
+	margin.add_theme_constant_override("margin_bottom", 22)
 	card.add_child(margin)
 	
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(340, 680)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	margin.add_child(scroll)
+	
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 20)
+	vbox.custom_minimum_size = Vector2(340, 0)
+	vbox.add_theme_constant_override("separation", 18)
 	margin.add_child(vbox)
 	
 	# Title
@@ -227,21 +234,23 @@ func _show_settings() -> void:
 	
 	#Music Slider
 	var slider := HSlider.new()
-	slider.min_value = -40.0
-	slider.max_value = 0.0
-	slider.value = _bg_music.volume_db
+	slider.min_value = 0
+	slider.max_value = 100
+	slider.step = 1
+	slider.value = GameManager.music_volume
 	slider.custom_minimum_size = Vector2(340, 30)
-	slider.value_changed.connect(func(val):
-		_bg_music.volume_db = val)
+	slider.value_changed.connect(func(val: float) -> void:
+		GameManager.music_volume = val
+		_bg_music.volume_db = GameManager.vol_to_db(val))
 	vbox.add_child(slider)
 	
 	var vol_value := Label.new()
-	vol_value.text = "%.1f dB" % _bg_music.volume_db
+	vol_value.text = "%d / 100" % int(GameManager.music_volume)
 	vol_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vol_value.add_theme_font_size_override("font_size", 16)
 	vol_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	slider.value_changed.connect(func(val):
-		vol_value.text = "%.1f dB" % val)
+	slider.value_changed.connect(func(val: float) -> void:
+		vol_value.text = "%d / 100" % int(val))
 	vbox.add_child(vol_value)
 	
 	# Spacer
@@ -257,22 +266,23 @@ func _show_settings() -> void:
 	vbox.add_child(sfx_lbl)
 
 	var sfx_slider := HSlider.new()
-	sfx_slider.min_value = -40.0
-	sfx_slider.max_value = 0.0
+	sfx_slider.min_value = 0
+	sfx_slider.max_value = 100
+	sfx_slider.step = 1
 	sfx_slider.value = GameManager.sfx_volume
 	sfx_slider.custom_minimum_size = Vector2(340, 30)
 	sfx_slider.value_changed.connect(func(val: float) -> void:
 		GameManager.sfx_volume = val
-	)
+		_btn_sfx.volume_db = GameManager.vol_to_db(val))
 	vbox.add_child(sfx_slider)
 
 	var sfx_val := Label.new()
-	sfx_val.text = "%.1f dB" % GameManager.sfx_volume
+	sfx_val.text = "%d / 100" % GameManager.sfx_volume
 	sfx_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sfx_val.add_theme_font_size_override("font_size", 16)
 	sfx_val.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
 	sfx_slider.value_changed.connect(func(val: float) -> void:
-		sfx_val.text = "%.1f dB" % val
+		sfx_val.text = "%d / 100" % int(val)
 	)
 	vbox.add_child(sfx_val)
 	
@@ -309,7 +319,7 @@ func _show_settings() -> void:
 	# Close button
 	var close_btn := _make_btn("✕  CLOSE", Color(0.55, 0.35, 0.55))
 	close_btn.pressed.connect(func():
-		_btn_sfx.volume_db = GameManager.sfx_volume
+		_btn_sfx.stop()
 		_btn_sfx.play()
 		overlay.queue_free()
 		card.queue_free())

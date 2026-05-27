@@ -50,8 +50,9 @@ var _active:          bool  = false
 var _last_plat_y:     float = 0.0   # Y of highest spawned platform
 var _last_plat_x: 	  float = 240.0 
 var _bg_music:  	  AudioStreamPlayer
-var _moving_platform: Platform  # Only one platform moves at a time
-var _gameover_sfx: AudioStreamPlayer
+#var _moving_platform: Platform  # Only one platform moves at a time
+var _fall_sfx: AudioStreamPlayer
+var _obstacle_timer: float = 2.5 # first obstacle spawns after 2.5 seconds
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
@@ -73,12 +74,12 @@ func _ready() -> void:
 	)
 	
 	_bg_music = AudioStreamPlayer.new()
-	_gameover_sfx = AudioStreamPlayer.new()
-	_bg_music.volume_db = -8.0
+	_fall_sfx = AudioStreamPlayer.new()
+	_bg_music.volume_db = GameManager.vol_to_db(GameManager.music_volume)
 	_bg_music.stream = load("res://sounds/game.mp3")
-	_gameover_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
+	_fall_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
 	add_child(_bg_music)
-	add_child(_gameover_sfx)
+	add_child(_fall_sfx)
 	#
 	if _bg_music.stream is AudioStreamMP3:
 		(_bg_music.stream as AudioStreamMP3).loop = true
@@ -92,7 +93,7 @@ func _process(delta: float) -> void:
 	_move_camera(delta)
 	_tick_platform_spawner()
 	_tick_cloud_spawner()
-	_tick_obstacle_spawner()
+	_tick_obstacle_spawner(delta)
 	#_ensure_moving_platform()  # Keep exactly 1 platform moving
 	_despawn_old_objects()
 	_check_game_over()
@@ -238,10 +239,23 @@ func _tick_platform_spawner() -> void:
 func _spawn_next_platform() -> void:
 	var gap   := _calc_gap()
 	var width := randf_range(68.0, 108.0)
-	var max_reach := 200.0 # max horizontal pixels player can travel per jump
-	var min_x := clampf(_last_plat_x - max_reach, 60.0, SW - 60.0)
-	var max_x := clampf(_last_plat_x + max_reach, 60.0, SW - 60.0)
-	var x := randf_range(min_x, max_x)
+	
+	 # Force zigzag spread: minimum 110px horizontal distance from last
+	var min_dist := 110.0
+	var max_dist := 210.0
+	var dir := 1.0 if randf() > 0.5 else -1.0
+	var dist := randf_range(min_dist, max_dist)
+	#var max_reach := 200.0 # max horizontal pixels player can travel per jump
+	#var min_x := clampf(_last_plat_x - max_reach, 60.0, SW - 60.0)
+	#var max_x := clampf(_last_plat_x + max_reach, 60.0, SW - 60.0)
+	var x := _last_plat_x + dir * dist
+	
+	 # If out of screen bounds, flip direction
+	if x < 65.0 or x > SW - 65.0:
+		x = _last_plat_x - dir * dist
+	
+	x = clampf(x, 65.0, SW - 65.0)
+	
 	var y := _last_plat_y - gap
 	var ptype := _pick_type()
 
@@ -281,31 +295,31 @@ func _spawn_cloud(pos: Vector2) -> void:
 	_clouds.add_child(c)
 	c.global_position = pos
 
-# ── Ensure One Moving Platform ─────────────────────────────
-func _ensure_moving_platform() -> void:
-	"""Ensure exactly 1 platform visible on screen is always moving."""
-	# Check if current moving platform is still valid and visible
-	if _moving_platform and is_instance_valid(_moving_platform):
-		var dist_to_camera: float = abs(_moving_platform.global_position.y - camera.global_position.y)
-		if dist_to_camera < SH * 0.6:  # Still on screen
-			return  # Keep current one moving
-		else:
-			_moving_platform.is_moving = false  # Stop old one
-
-	# Current platform is gone or off-screen, pick a new visible one
-	var visible_platforms: Array = []
-	for plat in _platforms.get_children():
-		if is_instance_valid(plat):
-			var dist: float = abs(plat.global_position.y - camera.global_position.y)
-			if dist < SH * 0.6:  # On screen
-				visible_platforms.append(plat)
-
-	if visible_platforms.size() > 0:
-		# Pick random visible platform and enable movement
-		if _moving_platform:
-			_moving_platform.is_moving = false  # Stop old one
-		_moving_platform = visible_platforms[randi() % visible_platforms.size()]
-		_moving_platform.enable_movement()
+## ── Ensure One Moving Platform ─────────────────────────────
+#func _ensure_moving_platform() -> void:
+	#"""Ensure exactly 1 platform visible on screen is always moving."""
+	## Check if current moving platform is still valid and visible
+	#if _moving_platform and is_instance_valid(_moving_platform):
+		#var dist_to_camera: float = abs(_moving_platform.global_position.y - camera.global_position.y)
+		#if dist_to_camera < SH * 0.6:  # Still on screen
+			#return  # Keep current one moving
+		#else:
+			#_moving_platform.is_moving = false  # Stop old one
+#
+	## Current platform is gone or off-screen, pick a new visible one
+	#var visible_platforms: Array = []
+	#for plat in _platforms.get_children():
+		#if is_instance_valid(plat):
+			#var dist: float = abs(plat.global_position.y - camera.global_position.y)
+			#if dist < SH * 0.6:  # On screen
+				#visible_platforms.append(plat)
+#
+	#if visible_platforms.size() > 0:
+		## Pick random visible platform and enable movement
+		#if _moving_platform:
+			#_moving_platform.is_moving = false  # Stop old one
+		#_moving_platform = visible_platforms[randi() % visible_platforms.size()]
+		#_moving_platform.enable_movement()
 
 # ── Camera Movement ────────────────────────────────────────
 func _move_camera(delta: float) -> void:
@@ -332,8 +346,8 @@ func _despawn_old_objects() -> void:
 	for node in _platforms.get_children():
 		if node.global_position.y > limit_y:
 			# Clear moving platform reference if it's being despawned
-			if node == _moving_platform:
-				_moving_platform = null
+			#if node == _moving_platform:
+				#_moving_platform = null
 			node.queue_free()
 
 	for node in _coins.get_children():
@@ -358,8 +372,8 @@ func _end_game() -> void:
 	_active = false
 	_bg_music.stop()
 	player.die()
-	_gameover_sfx.volume_db = GameManager.sfx_volume
-	_gameover_sfx.play()
+	_fall_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
+	_fall_sfx.play()
 	await get_tree().create_timer(1.5).timeout
 	GameManager.go_to("res://scenes/game_over.tscn")
 
@@ -432,9 +446,9 @@ func _apply_theme_colors(theme: int) -> void:
 			_bg_bot.color = Color(0.05, 0.02, 0.15)    # Dark purple
 
 func _change_music(theme: int) -> void:
-	"""Adjust music volume based on theme (no stream reload needed)."""
-	if not _bg_music:
-		return
+	#"""Adjust music volume based on theme (no stream reload needed)."""
+	#if not _bg_music:
+		#return
 	
 	# Only adjust volume per theme — no need to reload the stream
 	# since all themes currently use the same music file
@@ -455,7 +469,6 @@ func _show_in_game_menu() -> void:
 		return
 	
 	_active = false  # Pause the game
-	_bg_music.stream_paused = true # ← PAUSE music when menu opens
 	
 	# Dark overlay
 	var overlay := ColorRect.new()
@@ -512,21 +525,23 @@ func _show_in_game_menu() -> void:
 	
 	# Music slider
 	var slider := HSlider.new()
-	slider.min_value = -40.0
-	slider.max_value = 0.0
-	slider.value = _bg_music.volume_db
+	slider.min_value = 0
+	slider.max_value = 100
+	slider.step = 1
+	slider.value = GameManager.music_volume
 	slider.custom_minimum_size = Vector2(320, 28)
-	slider.value_changed.connect(func(val):
-		_bg_music.volume_db = val)
+	slider.value_changed.connect(func(val: float) -> void:
+		GameManager.music_volume = val
+		_bg_music.volume_db = GameManager.vol_to_db(val))
 	vbox.add_child(slider)
 	
 	var vol_value := Label.new()
-	vol_value.text = "%.1f dB" % _bg_music.volume_db
+	vol_value.text = "%d / 100" % int(GameManager.music_volume)
 	vol_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vol_value.add_theme_font_size_override("font_size", 14)
 	vol_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	slider.value_changed.connect(func(val):
-		vol_value.text = "%.1f dB" % val)
+	slider.value_changed.connect(func(val: float) -> void:
+		vol_value.text = "%d / 100" % int(val))
 	vbox.add_child(vol_value)
 	
 	#SFX Volume Slider
@@ -538,8 +553,9 @@ func _show_in_game_menu() -> void:
 	
 	#SFX slider
 	var sfx_slider := HSlider.new()
-	sfx_slider.min_value = -40.0
-	sfx_slider.max_value = 0.0
+	sfx_slider.min_value = 0
+	sfx_slider.max_value = 100
+	sfx_slider.step = 1
 	sfx_slider.value = GameManager.sfx_volume
 	sfx_slider.custom_minimum_size = Vector2(320, 28)
 	sfx_slider.value_changed.connect(func(val: float) -> void:
@@ -547,12 +563,12 @@ func _show_in_game_menu() -> void:
 	vbox.add_child(sfx_slider)
 	
 	var sfx_value := Label.new()
-	sfx_value.text = "%.1f dB" % GameManager.sfx_volume
+	sfx_value.text = "%d / 100" % int(GameManager.sfx_volume)
 	sfx_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sfx_value.add_theme_font_size_override("font_size", 14)
 	sfx_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
 	sfx_slider.value_changed.connect(func(val: float) -> void:
-		sfx_value.text = "%.1f dB" % val)
+		sfx_value.text = "%d / 100" % int(val))
 	vbox.add_child(sfx_value)
 	
 	# Spacer
@@ -582,7 +598,7 @@ func _show_in_game_menu() -> void:
 	resume_btn.pressed.connect(func():
 		overlay.queue_free()
 		card.queue_free()
-		_bg_music.stream_paused = false # Resume Music
+		## Resume Music
 		_active = true)
 	vbox.add_child(resume_btn)
 
@@ -617,25 +633,34 @@ func _make_menu_button(text: String) -> Button:
 	return btn
 
 # ── Obstacle Spawner ───────────────────────────────────────
-func _tick_obstacle_spawner() -> void:
+func _tick_obstacle_spawner(delta: float) -> void:
 	# Only spawn obstacles if score >= 1000
 	if GameManager.score < 300:
 		return
 	
-	# Spawn obstacles more frequently as score increases
-	var obstacle_chance := clampf(float(GameManager.score - 300) / 300.0, 0.0, 0.05)
-	if randf() < obstacle_chance:
-		if GameManager.current_theme == 1:
-			# Birds spawn from both left and right sides
-			var spawn_y = camera.global_position.y + randf_range(-SH * 0.3, SH * 0.3)
-			# Left side bird
-			_spawn_obstacle(Vector2(-30.0, spawn_y))
-			# Right side bird
-			_spawn_obstacle(Vector2(SW + 30.0, spawn_y))
-		else:
-			# Other obstacles spawn from above
-			var top_y := camera.global_position.y - SH / 2.0 - 50.0
-			_spawn_obstacle(Vector2(randf_range(50.0, SW - 50.0), top_y))
+	# Count down timer — spawn ONE obstacle when it hits zero
+	_obstacle_timer -= delta
+	if _obstacle_timer > 0.0:
+		return
+
+	# ── Raindrop timing ─────────────────────────────────────
+	# Spawn 1 obstacle every 0.4–1.2 seconds (easy) to 0.2–0.6 seconds (hard)
+	# Because each obstacle takes ~3–5 sec to cross the screen,
+	# several will always be visible at once = raindrop effect!
+	var t := clampf(float(GameManager.score - 300) / 2000.0, 0.0, 1.0)
+	_obstacle_timer = randf_range(lerpf(0.8, 0.25, t), lerpf(1.5, 0.6, t))
+
+	# ── Spawn 1 at a random X ────────────────────────────────
+	match GameManager.current_theme:
+		1:   # Bird — random side each time
+			var from_left := randi() % 2 == 0
+			var spawn_y   := camera.global_position.y + randf_range(-SH * 0.3, SH * 0.15)
+			var spawn_x   := -30.0 if from_left else SW + 30.0
+			_spawn_obstacle(Vector2(spawn_x, spawn_y))
+		_:   # Meteor/Star — random X across the top
+			var top_y  := camera.global_position.y - SH / 2.0 - 30.0
+			var rand_x := randf_range(40.0, SW - 40.0)
+			_spawn_obstacle(Vector2(rand_x, top_y))
 
 func _spawn_obstacle(pos: Vector2) -> void:
 	var obstacle

@@ -3,20 +3,18 @@ extends Control
 ##  GameOver.gd  —  Game Over / Results Screen
 ##  Fixed for Godot 4.6.2 — no set_anchor_preset() calls
 ## ============================================================
-var _gameover_sfx: AudioStreamPlayer
+var _fall_sfx: AudioStreamPlayer
 var _btn_sfx: AudioStreamPlayer
+var _gameover_sfx: AudioStreamPlayer
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	# NOTE: Anchors are already set in game_over.tscn — no call needed here
-	_gameover_sfx = AudioStreamPlayer.new()
+	_fall_sfx = AudioStreamPlayer.new()
 	_btn_sfx = AudioStreamPlayer.new()
-	_gameover_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
+	_fall_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
 	_btn_sfx.stream = load("res://sounds/172204__leszek_szary__menu-button.wav")
-	_gameover_sfx.volume_db = 0.0
 	add_child(_btn_sfx)
-	add_child(_gameover_sfx)
-	_gameover_sfx.volume_db = GameManager.sfx_volume
-	#_gameover_sfx.play()
+	add_child(_fall_sfx)
 	_build_background()
 	_build_ui()
 
@@ -33,8 +31,8 @@ func _build_background() -> void:
 func _build_ui() -> void:
 	# ── Central card — manually centered: x=(480-360)/2=60, y=(854-500)/2=177 ──
 	var card := PanelContainer.new()
-	card.position = Vector2(60, 150)
-	card.size     = Vector2(360, 520)
+	card.position = Vector2(60, 212)
+	card.size     = Vector2(360, 0)
 
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.92)
@@ -72,6 +70,11 @@ func _build_ui() -> void:
 	title.add_theme_constant_override("shadow_offset_x", 3)
 	title.add_theme_constant_override("shadow_offset_y", 3)
 	inner.add_child(title)
+	
+	_gameover_sfx = AudioStreamPlayer.new()
+	_gameover_sfx.stream = load("res://sounds/gameover.mp3")
+	add_child(_gameover_sfx)
+	_gameover_sfx.play()
 
 	# ── Score Section ──────────────────────────────────────
 	var score_sec := VBoxContainer.new()
@@ -99,9 +102,9 @@ func _build_ui() -> void:
 	inner.add_child(sp)
 
 	# ── Buttons ────────────────────────────────────────────
-	var retry := _make_btn("↺   RETRY",      Color(0.14, 0.68, 0.26))
+	var retry := _make_btn("↺   RETRY",     Color(0.14, 0.68, 0.26))
 	retry.pressed.connect(func(): 
-		_btn_sfx.volume_db = GameManager.sfx_volume
+		_btn_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 		_btn_sfx.play()
 		await _btn_sfx.finished
 		GameManager.go_to("res://scenes/game.tscn"))
@@ -109,7 +112,7 @@ func _build_ui() -> void:
 
 	var menu := _make_btn("⌂   MAIN MENU", Color(0.22, 0.40, 0.82))
 	menu.pressed.connect(func(): 
-		_btn_sfx.volume_db = GameManager.sfx_volume
+		_btn_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 		_btn_sfx.play()
 		await _btn_sfx.finished
 		GameManager.go_to("res://scenes/main_menu.tscn"))

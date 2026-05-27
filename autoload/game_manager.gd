@@ -12,8 +12,8 @@ var score: int = 0
 var high_score: int = 0
 var coins_collected: int = 0
 var sfx_enabled: bool = true
-var sfx_volume: float = 5.0
-var music_volume: float = 0.8
+var sfx_volume: float = 100
+var music_volume: float = 100
 var current_theme: int = 0   # 0=Clear, 1=Sunset, 2=Night, 3=Space
 
 const SAVE_PATH := "user://skybound_save.dat"
@@ -21,6 +21,12 @@ const SAVE_PATH := "user://skybound_save.dat"
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	_load_data()
+
+## Convert 0-100 percentage to audio dB
+func vol_to_db(pct: float) -> float:
+	if pct <= 0.0:
+		return -80.0
+	return linear_to_db(pct / 100.0)
 
 # ── Score Functions ────────────────────────────────────────
 ## Add points to the score. Automatically updates high score.

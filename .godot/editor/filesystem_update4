@@ -1,10 +1,5 @@
-res://scenes/main_menu.tscn
-res://scripts/player.gd
-res://scripts/meteor.gd
-res://scripts/falling_star.gd
-res://scripts/flying_bird.gd
+res://scenes/game_over.tscn
 res://scripts/game.gd
-res://scripts/main_menu.gd
 res://scripts/game_over.gd
-res://scripts/platform.gd
-res://README.md
+res://scripts/main_menu.gd
+res://scripts/coin.gd

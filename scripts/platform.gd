@@ -67,7 +67,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if is_moving:
 		_move_time += delta
-		global_position.x = _start_x + sin(_move_time * move_speed * 0.01) * move_range
+		global_position.x = _start_x + sin(_move_time * 1.8) * move_range
 
 func enable_movement() -> void:
 	is_moving = true

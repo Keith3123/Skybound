@@ -69,10 +69,11 @@ func _draw() -> void:
 # ── Collection ─────────────────────────────────────────────
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
+		set_deferred("monitoring", false)
 		GameManager.collect_coin()
 		visible = false     # <- hide the coin
 		if GameManager.sfx_enabled:
-			_sfx.volume_db = GameManager.sfx_volume
+			_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 		_sfx.play()			# <- play sound
 		await _sfx.finished  # <- wait to finished the sound
 		queue_free()         # <- then remove
