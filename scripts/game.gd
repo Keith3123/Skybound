@@ -15,9 +15,12 @@ const PLAYER_SCENE   := preload("res://scenes/player.tscn")
 const PLATFORM_SCENE := preload("res://scenes/platform.tscn")
 const COIN_SCENE     := preload("res://scenes/coin.tscn")
 const CLOUD_SCENE    := preload("res://scenes/cloud.tscn")
+const TWINKLE_SCENE  := preload("res://scenes/star.tscn")
+const PLANET_SCENE   := preload("res://scenes/planet.tscn")
 const METEOR_SCENE   := preload("res://scenes/meteor.tscn")
 const BIRD_SCENE     := preload("res://scenes/flying_bird.tscn")
 const STAR_SCENE     := preload("res://scenes/falling_star.tscn")
+const MOON_SCENE     := preload("res://scenes/moon.tscn")
 
 # ── Screen / World Constants ───────────────────────────────
 const SW: float = 480.0    # Screen width
@@ -31,7 +34,7 @@ const DESPAWN_GAP:  float = 350.0   # Remove objects this far below camera botto
 const GAP_MIN_EASY: float = 100.0
 const GAP_MAX_EASY: float = 140.0
 const GAP_MIN_HARD: float = 145.0
-const GAP_MAX_HARD: float = 195.0
+const GAP_MAX_HARD: float = 150.0
 
 # ── Runtime Nodes (created in code) ───────────────────────
 var player:      CharacterBody2D
@@ -42,15 +45,18 @@ var coin_label:  Label
 
 var _platforms:  Node2D   # Container for all platform nodes
 var _coins:      Node2D   # Container for all coin nodes
-var _clouds:     Node2D   # Container for cloud nodes
+var _decorations:     Node2D   # Container for cloud nodes
 var _obstacles:  Node2D   # Container for obstacle nodes
+var _moon_spawned := false
+var _moon_phase := 0
+var _last_planet_type := -1
 
 # ── Game State ─────────────────────────────────────────────
 var _active:          bool  = false
 var _last_plat_y:     float = 0.0   # Y of highest spawned platform
 var _last_plat_x: 	  float = 240.0 
 var _bg_music:  	  AudioStreamPlayer
-#var _moving_platform: Platform  # Only one platform moves at a time
+var _hover_sfx: 	  AudioStreamPlayer
 var _fall_sfx: AudioStreamPlayer
 var _obstacle_timer: float = 2.5 # first obstacle spawns after 2.5 seconds
 
@@ -75,11 +81,15 @@ func _ready() -> void:
 	
 	_bg_music = AudioStreamPlayer.new()
 	_fall_sfx = AudioStreamPlayer.new()
+	_hover_sfx = AudioStreamPlayer.new()
 	_bg_music.volume_db = GameManager.vol_to_db(GameManager.music_volume)
+	_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 	_bg_music.stream = load("res://sounds/game.mp3")
 	_fall_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
+	_hover_sfx.stream = load("res://sounds/hover.mp3")
 	add_child(_bg_music)
 	add_child(_fall_sfx)
+	add_child(_hover_sfx)
 	#
 	if _bg_music.stream is AudioStreamMP3:
 		(_bg_music.stream as AudioStreamMP3).loop = true
@@ -92,7 +102,7 @@ func _process(delta: float) -> void:
 		return
 	_move_camera(delta)
 	_tick_platform_spawner()
-	_tick_cloud_spawner()
+	_tick_decoration_spawner()
 	_tick_obstacle_spawner(delta)
 	#_ensure_moving_platform()  # Keep exactly 1 platform moving
 	_despawn_old_objects()
@@ -130,11 +140,11 @@ func _build_background() -> void:
 
 # ── Scene Containers ───────────────────────────────────────
 func _build_containers() -> void:
-	_clouds = Node2D.new();    _clouds.name   = "Clouds";    _clouds.z_index    = -4
+	_decorations = Node2D.new();    _decorations.name   = "Decorations";    _decorations.z_index = -4
 	_platforms = Node2D.new(); _platforms.name = "Platforms"; _platforms.z_index = 0
 	_coins = Node2D.new();     _coins.name    = "Coins";     _coins.z_index     = 1
 	_obstacles = Node2D.new();  _obstacles.name = "Obstacles"; _obstacles.z_index = 1
-	add_child(_clouds)
+	add_child(_decorations)
 	add_child(_platforms)
 	add_child(_coins)
 	add_child(_obstacles)
@@ -170,9 +180,30 @@ func _build_ui() -> void:
 	hs_label.add_theme_constant_override("shadow_offset_y", 2)
 	layer.add_child(hs_label)
 
-	# Coin counter (below score)
-	coin_label = _make_label("🪙 0", Vector2(14, 44), 20, Color(1.0, 0.88, 0.2))
-	layer.add_child(coin_label)
+	## Coin counter (below score)
+	#coin_label = _make_label("🪙 0", Vector2(14, 44), 20, Color(1.0, 0.88, 0.2))
+	#layer.add_child(coin_label)
+	# Coin UI container
+	var coin_box = HBoxContainer.new()
+	coin_box.position = Vector2(14, 44)
+	coin_box.add_theme_constant_override("separation", 6)
+	layer.add_child(coin_box)
+
+	# Coin icon
+	var coin_icon := Label.new()
+	coin_icon.text = "🪙"
+	coin_icon.add_theme_font_size_override("font_size", 22)
+	coin_icon.add_theme_color_override("font_color", Color(1.0, 0.88, 0.2))
+	coin_icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	coin_box.add_child(coin_icon)
+
+	# Coin amount
+	coin_label = Label.new()
+	coin_label.text = "0"
+	coin_label.add_theme_font_size_override("font_size", 20)
+	coin_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.2))
+	coin_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	coin_box.add_child(coin_label)
 	
 	# Menu button (right side, below score info) - small hamburger menu icon
 	var menu_btn: Button = Button.new()
@@ -223,11 +254,9 @@ func _build_initial_level() -> void:
 		_spawn_next_platform()
 
 	# A handful of decorative clouds at random positions
+	var top_y := camera.global_position.y - SH / 2.0
 	for _i in 6:
-		_spawn_cloud(Vector2(
-			randf_range(0, SW),
-			randf_range(-SH, SH * 0.25)
-		))
+		_spawn_decoration(_find_free_decoration_position(top_y))
 
 # ── Platform Spawning ──────────────────────────────────────
 func _tick_platform_spawner() -> void:
@@ -281,19 +310,98 @@ func _spawn_coin(pos: Vector2) -> void:
 	_coins.add_child(c)
 	c.global_position = pos
 
-# ── Cloud Spawning ─────────────────────────────────────────
-func _tick_cloud_spawner() -> void:
-	if _clouds.get_child_count() < 8:
+# ── Decorations Spawning ─────────────────────────────────────────
+func _tick_decoration_spawner() -> void:
+	var limit := 8
+	
+	match GameManager.current_theme:
+		0:
+			limit = 8
+		1:
+			limit = 10 # many clouds
+		2: 
+			limit = 24 # many stars
+		3: 
+			limit = 6 # few planets
+			
+	if _decorations.get_child_count() < limit:
 		var top_y := camera.global_position.y - SH / 2.0
-		_spawn_cloud(Vector2(
+		
+		_spawn_decoration(Vector2(
 			randf_range(-50.0, SW + 50.0),
 			top_y - randf_range(40.0, 260.0)
 		))
 
-func _spawn_cloud(pos: Vector2) -> void:
-	var c := CLOUD_SCENE.instantiate()
-	_clouds.add_child(c)
-	c.global_position = pos
+func _spawn_decoration(pos: Vector2) -> void:
+	#var c := CLOUD_SCENE.instantiate()
+	var deco 
+	
+	match GameManager.current_theme:
+		0: 
+			deco = CLOUD_SCENE.instantiate()
+			deco.modulate = Color(1, 1, 1, 1)
+		1:
+			deco = CLOUD_SCENE.instantiate()
+			deco.modulate = Color(
+				1.0,
+				randf_range(0.72, 0.88),
+				randf_range(0.55, 0.75),
+				1.0
+			)
+		2: 
+			if not _moon_spawned:
+				deco = MOON_SCENE.instantiate()
+				_moon_spawned = true
+
+				# apply phase
+				deco.phase = _moon_phase
+				
+				_moon_phase = (_moon_phase + 1) % 5
+				# make moon bigger
+				deco.scale = Vector2.ONE * 1.8
+
+			else:
+				deco = TWINKLE_SCENE.instantiate()
+
+		3: 
+			if randf() < 0.35:
+				deco = PLANET_SCENE.instantiate()
+				
+				var next_type := randi() % 5
+				
+				while next_type == _last_planet_type:
+					next_type = randi() % 5
+				
+				deco._type = next_type
+				_last_planet_type = next_type
+			else:
+				deco = TWINKLE_SCENE.instantiate()
+	
+	if deco == null:
+		return
+		
+	if not deco.scene_file_path.contains("moon"):
+		var s := randf_range(0.7, 1.6)
+		deco.scale = Vector2.ONE * s
+
+	## Random size
+	#var s := randf_range(0.7, 1.8)
+	#deco.scale = Vector2.ONE * 5 
+	
+	# Random size
+	#if deco.scene_file_path.contains("moon"):
+		#deco.scale *= 1.8
+	
+	# Fade-in effect
+	deco.modulate.a = 0.0
+	
+	_decorations.add_child(deco)
+	deco.global_position = pos
+	
+		# Smooth fade in
+
+	var tween := create_tween()
+	tween.tween_property(deco, "modulate:a", 1.0, 1.0)
 
 ## ── Ensure One Moving Platform ─────────────────────────────
 #func _ensure_moving_platform() -> void:
@@ -354,7 +462,7 @@ func _despawn_old_objects() -> void:
 		if node.global_position.y > limit_y:
 			node.queue_free()
 
-	for node in _clouds.get_children():
+	for node in _decorations.get_children():
 		if node.global_position.y > limit_y + 150:
 			node.queue_free()
 
@@ -415,13 +523,90 @@ func _on_score_updated(new_score: int) -> void:
 	if hs_label:
 		hs_label.text = "Best: %d" % GameManager.high_score
 	if coin_label:
-		coin_label.text = "🪙 %d" % GameManager.coins_collected
+		#coin_label.text = "🪙 %d" % GameManager.coins_collected
+		coin_label.text = str(GameManager.coins_collected)
 
 func _on_theme_changed(theme: int) -> void:
 	"""Called when the player advances to a new theme (every 5 coins)."""
 	_apply_theme_colors(theme)
 	_change_music(theme)
+	_moon_spawned = false
+	
+	#if theme == 2:
+		#_moon_phase = (_moon_phase + 1) % 5
+	
+	_fade_out_old_decorations()
+	
+	var amount := 8 
+	
+	match theme:
+		0:
+			amount = 8 # clouds
+		1:
+			amount = 10 # clouds
+		2:
+			amount = 24 # stars
+		3:
+			amount = 10 # planets
+			
+	var top_y := camera.global_position.y - SH / 2.0
+	
+	for i in amount:
+		_spawn_decoration(_find_free_decoration_position(top_y))
+		
+func _find_free_decoration_position(top_y: float) -> Vector2:
+	var tries := 20
 
+	while tries > 0:
+		var pos := Vector2(
+			randf_range(40.0, SW - 40.0),
+			top_y - randf_range(40.0, SH)
+		)
+
+		var valid := true
+
+		for d in _decorations.get_children():
+			if not is_instance_valid(d):
+				continue
+
+			# bigger spacing for planets
+			var min_dist := 140.0
+			
+			if GameManager.current_theme == 3 and d.scene_file_path.contains("planet"):
+				min_dist = 420
+
+			# stars can be closer
+			if d.scene_file_path.contains("star"):
+				min_dist = 60.0
+
+			if pos.distance_to(d.global_position) < min_dist:
+				valid = false
+				break
+
+		if valid:
+			return pos
+
+		tries -= 1
+
+	# fallback if no free spot found
+	return Vector2(
+		randf_range(40.0, SW - 40.0),
+		top_y - randf_range(40.0, SH)
+	)
+func _fade_out_old_decorations() -> void:
+	for node in _decorations.get_children():
+		if is_instance_valid(node):
+			node.modulate.a = 0.0
+			node.queue_free()
+			
+		#var tween := create_tween()
+#
+		#tween.tween_property(node, "modulate:a", 0.0, 0.8)
+#
+		#tween.finished.connect(func():
+			#if is_instance_valid(node):
+				#node.queue_free())	
+				
 func _apply_theme_colors(theme: int) -> void:
 	"""Update background colors based on theme number."""
 	match theme:
@@ -630,6 +815,14 @@ func _make_menu_button(text: String) -> Button:
 	
 	btn.add_theme_font_size_override("font_size", 20)
 	btn.add_theme_color_override("font_color", Color.WHITE)
+	
+	btn.mouse_entered.connect(func():
+		if _hover_sfx:
+			_hover_sfx.stop()
+			_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
+			_hover_sfx.play()
+	)
+	
 	return btn
 
 # ── Obstacle Spawner ───────────────────────────────────────

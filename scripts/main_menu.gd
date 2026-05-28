@@ -9,18 +9,27 @@ const SH := 854.0
 var _btn_sfx: AudioStreamPlayer
 var _bg_music: AudioStreamPlayer
 var _settings_panel: Control  # Reference to settings overlay
+var _hover_sfx: AudioStreamPlayer
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	# NOTE: Anchors are already set in main_menu.tscn — no call needed here
 	_btn_sfx = AudioStreamPlayer.new()
 	_bg_music = AudioStreamPlayer.new()
+	_hover_sfx = AudioStreamPlayer.new()
 	_btn_sfx.stream = load("res://sounds/172204__leszek_szary__menu-button.wav")
 	_bg_music.stream = load("res://sounds/game.mp3")
+	_hover_sfx.stream = load("res://sounds/hover.mp3")
 	_btn_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 	_bg_music.volume_db = GameManager.vol_to_db(GameManager.music_volume)
+	_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 	add_child(_btn_sfx)
 	add_child(_bg_music)
+	add_child(_hover_sfx)
+	
+	if _bg_music.stream is AudioStreamMP3:
+		(_bg_music.stream as AudioStreamMP3).loop = true
+		
 	_bg_music.play()
 	_build_ui()
 
@@ -169,6 +178,13 @@ func _make_btn(text: String, color: Color) -> Button:
 
 	b.add_theme_font_size_override("font_size", 24)
 	b.add_theme_color_override("font_color", Color.WHITE)
+	
+	b.mouse_entered.connect(func():
+		if _hover_sfx:
+			_hover_sfx.stop()
+			_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
+			_hover_sfx.play()
+	)
 	return b
 
 # ── Settings Panel ────────────────────────────────────────
@@ -304,7 +320,7 @@ func _show_settings() -> void:
 	ctrl_text2.add_theme_font_size_override("font_size", 16)
 	ctrl_text2.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
 	vbox.add_child(ctrl_text2)
-	
+		
 	var ctrl_text3 := Label.new()
 	ctrl_text3.text = "Spacebar/ CTRL (hold) \nShield Sides" # for birds obstacle
 	ctrl_text3.add_theme_font_size_override("font_size", 16)

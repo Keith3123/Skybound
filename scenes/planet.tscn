@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c8qynqi3u5276"]
+
+[ext_resource type="Script" uid="uid://cvunf6hm01nyf" path="res://scripts/planet.gd" id="1_cktii"]
+
+[node name="Planet" type="Node2D" unique_id=1539645192]
+script = ExtResource("1_cktii")

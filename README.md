@@ -18,6 +18,9 @@ Skybound/
 │   ├── platform.gd            ← Platform types & drawing
 │   ├── coin.gd                ← Collectible coins
 │   ├── cloud.gd               ← Decorative clouds
+│   ├── star.gd               ← Decorative twinkling stars
+│   ├── planet.gd               ← Decorative planets
+│   ├── moon.gd               ← Decorative moon
 │   ├── game.gd                ← Main game loop
 │   ├── main_menu.gd           ← Title screen
 │   ├── falling_star.gd        ← Falling Star Obstacle 
@@ -33,6 +36,9 @@ Skybound/
 │   ├── platform.tscn
 │   ├── coin.tscn
 │   ├── cloud.tscn
+│   ├── star.tscn
+│   ├── planet.tscn
+│   ├── moon.tscn
 │   ├── falling_star.tscn
 │   ├── flying_bird.tscn
 │   └── meteor.tscn
@@ -43,6 +49,7 @@ Skybound/
 	├── 336933__the-sacha-rush__coin4.wav        ← Coin collect sound
 	├── 172204__leszek_szary__menu-button.wav    ← Button click sound
 	├── gameover.mp3                             ← Game Over sound
+	├── hover.mp3                                ← Hovering sound
 	└── 412168__poligonstudio__arcade-game-over.wav  ← Falling sound
 ```
 

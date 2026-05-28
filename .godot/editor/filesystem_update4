@@ -1,6 +1,6 @@
-res://scenes/game_over.tscn
+res://scenes/moon.tscn
+res://scripts/planet.gd
+res://scripts/moon.gd
 res://scripts/game.gd
-res://scripts/game_over.gd
 res://scripts/main_menu.gd
-res://scripts/coin.gd
 res://README.md

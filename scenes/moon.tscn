@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bl33yxk3h42ia"]
+
+[ext_resource type="Script" uid="uid://b8xey730y5647" path="res://scripts/moon.gd" id="1_530pw"]
+
+[node name="Moon" type="Node2D" unique_id=1815150033]
+script = ExtResource("1_530pw")
