@@ -43,6 +43,7 @@ func add_score(points: int) -> void:
 	# Check if we crossed a 120-point threshold (theme progression)
 	var old_theme = old_score / 120
 	var new_theme = score / 120
+	
 	if new_theme > old_theme:
 		_advance_theme()
 

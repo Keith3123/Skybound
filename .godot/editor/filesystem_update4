@@ -1,2 +1,2 @@
-res://scenes/player.tscn
-res://scripts/main_menu.gd
+res://scenes/moon.tscn
+res://scripts/game.gd

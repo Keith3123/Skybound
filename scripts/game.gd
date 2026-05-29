@@ -478,6 +478,7 @@ func _end_game() -> void:
 	if not _active:
 		return
 	_active = false
+	get_tree().paused = false
 	_bg_music.stop()
 	player.die()
 	_fall_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
@@ -654,11 +655,13 @@ func _show_in_game_menu() -> void:
 		return
 	
 	_active = false  # Pause the game
+	get_tree().paused = true
 	
 	# Dark overlay
 	var overlay := ColorRect.new()
 	overlay.color = Color(0.0, 0.0, 0.0, 0.65)
 	overlay.size = Vector2(SW, SH)
+	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 	var hud_layer = get_node("HUD") as CanvasLayer
 	hud_layer.add_child(overlay)
 	
@@ -666,6 +669,7 @@ func _show_in_game_menu() -> void:
 	var card := PanelContainer.new()
 	card.position = Vector2(60, 200)
 	card.size = Vector2(360, 450)
+	card.process_mode = Node.PROCESS_MODE_ALWAYS
 	
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.95)
@@ -695,7 +699,7 @@ func _show_in_game_menu() -> void:
 	
 	# Title
 	var title := Label.new()
-	title.text = "MENU"
+	title.text = "PAUSED"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 40)
 	title.add_theme_color_override("font_color", Color.WHITE)
@@ -766,6 +770,7 @@ func _show_in_game_menu() -> void:
 	retry_btn.pressed.connect(func():
 		overlay.queue_free()
 		card.queue_free()
+		get_tree().paused = false
 		GameManager.go_to("res://scenes/game.tscn"))
 	vbox.add_child(retry_btn)
 	
@@ -774,6 +779,7 @@ func _show_in_game_menu() -> void:
 	home_btn.pressed.connect(func():
 		overlay.queue_free()
 		card.queue_free()
+		get_tree().paused = false
 		_bg_music.stop()
 		GameManager.go_to("res://scenes/main_menu.tscn"))
 	vbox.add_child(home_btn)
@@ -784,6 +790,7 @@ func _show_in_game_menu() -> void:
 		overlay.queue_free()
 		card.queue_free()
 		## Resume Music
+		get_tree().paused = false
 		_active = true)
 	vbox.add_child(resume_btn)
 
