@@ -1,6 +1,2 @@
-res://scenes/moon.tscn
-res://scripts/planet.gd
-res://scripts/moon.gd
-res://scripts/game.gd
+res://scenes/player.tscn
 res://scripts/main_menu.gd
-res://README.md

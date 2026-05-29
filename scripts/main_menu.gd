@@ -199,7 +199,7 @@ func _show_settings() -> void:
 	# Settings card
 	var card := PanelContainer.new()
 	card.position = Vector2(45, 50)
-	card.size = Vector2(390, 740)
+	card.size = Vector2(390, 700)
 	
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.95)
@@ -224,121 +224,261 @@ func _show_settings() -> void:
 	card.add_child(margin)
 	
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(340, 680)
+	scroll.custom_minimum_size = Vector2(340, 0)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
-	
+
 	var vbox := VBoxContainer.new()
 	vbox.custom_minimum_size = Vector2(340, 0)
-	vbox.add_theme_constant_override("separation", 18)
-	margin.add_child(vbox)
-	
-	# Title
+	vbox.add_theme_constant_override("separation", 10)
+	scroll.add_child(vbox)  
+
 	var title := Label.new()
 	title.text = "SETTINGS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 44)
+	title.add_theme_font_size_override("font_size", 40)
 	title.add_theme_color_override("font_color", Color.WHITE)
 	vbox.add_child(title)
-	
-	# Music Volume Section
-	var vol_label := Label.new()
-	vol_label.text = "🔊  Music Volume"
-	vol_label.add_theme_font_size_override("font_size", 20)
-	vol_label.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0))
-	vbox.add_child(vol_label)
-	
-	#Music Slider
-	var slider := HSlider.new()
-	slider.min_value = 0
-	slider.max_value = 100
-	slider.step = 1
-	slider.value = GameManager.music_volume
-	slider.custom_minimum_size = Vector2(340, 30)
-	slider.value_changed.connect(func(val: float) -> void:
-		GameManager.music_volume = val
-		_bg_music.volume_db = GameManager.vol_to_db(val))
-	vbox.add_child(slider)
-	
-	var vol_value := Label.new()
-	vol_value.text = "%d / 100" % int(GameManager.music_volume)
-	vol_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vol_value.add_theme_font_size_override("font_size", 16)
-	vol_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	slider.value_changed.connect(func(val: float) -> void:
-		vol_value.text = "%d / 100" % int(val))
-	vbox.add_child(vol_value)
-	
-	# Spacer
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 10)
-	vbox.add_child(spacer)
-	
-	# SFX Volume
-	var sfx_lbl := Label.new()
-	sfx_lbl.text = "🎵  SFX Volume"
-	sfx_lbl.add_theme_font_size_override("font_size", 20)
-	sfx_lbl.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0))
-	vbox.add_child(sfx_lbl)
 
-	var sfx_slider := HSlider.new()
-	sfx_slider.min_value = 0
-	sfx_slider.max_value = 100
-	sfx_slider.step = 1
-	sfx_slider.value = GameManager.sfx_volume
-	sfx_slider.custom_minimum_size = Vector2(340, 30)
-	sfx_slider.value_changed.connect(func(val: float) -> void:
-		GameManager.sfx_volume = val
-		_btn_sfx.volume_db = GameManager.vol_to_db(val))
-	vbox.add_child(sfx_slider)
+	_add_vol_card(vbox,
+		"🔊", Color(0.16, 0.58, 0.40),
+		"Music Volume", "Background tracks",
+		GameManager.music_volume,
+		func(val: float) -> void:
+			GameManager.music_volume = val
+			_bg_music.volume_db = GameManager.vol_to_db(val))
 
-	var sfx_val := Label.new()
-	sfx_val.text = "%d / 100" % GameManager.sfx_volume
-	sfx_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sfx_val.add_theme_font_size_override("font_size", 16)
-	sfx_val.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	sfx_slider.value_changed.connect(func(val: float) -> void:
-		sfx_val.text = "%d / 100" % int(val)
-	)
-	vbox.add_child(sfx_val)
-	
-	# Controls Section
-	var ctrl_label := Label.new()
-	ctrl_label.text = "🎮  CONTROLS"
-	ctrl_label.add_theme_font_size_override("font_size", 20)
-	ctrl_label.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0))
-	vbox.add_child(ctrl_label)
-	
-	var ctrl_text := Label.new()
-	ctrl_text.text = "← → Arrow Keys \nMove Left or Right"
-	ctrl_text.add_theme_font_size_override("font_size", 16)
-	ctrl_text.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	vbox.add_child(ctrl_text)
-	
-	var ctrl_text2 := Label.new()
-	ctrl_text2.text = "↑ Arrow Key (hold) \nShield Up" # for falling meteors and stars
-	ctrl_text2.add_theme_font_size_override("font_size", 16)
-	ctrl_text2.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	vbox.add_child(ctrl_text2)
-		
-	var ctrl_text3 := Label.new()
-	ctrl_text3.text = "Spacebar/ CTRL (hold) \nShield Sides" # for birds obstacle
-	ctrl_text3.add_theme_font_size_override("font_size", 16)
-	ctrl_text3.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	vbox.add_child(ctrl_text3)
-	
-	# Spacer
-	var spacer2 := Control.new()
-	spacer2.custom_minimum_size = Vector2(0, 10)
-	vbox.add_child(spacer2)
-	
-	# Close button
+	_add_vol_card(vbox,
+		"🎵", Color(0.26, 0.42, 0.80),
+		"SFX Volume", "Sound effects",
+		GameManager.sfx_volume,
+		func(val: float) -> void:
+			GameManager.sfx_volume = val
+			_btn_sfx.volume_db = GameManager.vol_to_db(val))
+
+	_add_controls_card(vbox)
+
+	#var sp := Control.new()
+	#sp.custom_minimum_size = Vector2(0, 6)
+	#vbox.add_child(sp)
+
 	var close_btn := _make_btn("✕  CLOSE", Color(0.55, 0.35, 0.55))
 	close_btn.pressed.connect(func():
-		_btn_sfx.stop()
-		_btn_sfx.play()
-		overlay.queue_free()
-		card.queue_free())
+		_btn_sfx.stop(); _btn_sfx.play()
+		overlay.queue_free(); card.queue_free())
 	vbox.add_child(close_btn)
-	
+
 	_settings_panel = overlay
+	
+func _add_vol_card(parent: Control, icon: String, icon_col: Color,
+		title: String, subtitle: String,
+		init_val: float, on_change: Callable) -> void:
+
+	var card := PanelContainer.new()
+	var cs := StyleBoxFlat.new()
+	cs.bg_color = Color(0.12, 0.17, 0.36, 0.90)
+	cs.corner_radius_top_left = 12; cs.corner_radius_top_right = 12
+	cs.corner_radius_bottom_left = 12; cs.corner_radius_bottom_right = 12
+	card.add_theme_stylebox_override("panel", cs)
+	parent.add_child(card)
+
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left",   14)
+	m.add_theme_constant_override("margin_right",  14)
+	m.add_theme_constant_override("margin_top",    12)
+	m.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(m)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 12)
+	m.add_child(col)
+
+	# Top row: icon badge + title/subtitle + value badge
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	col.add_child(top)
+
+	var ibx := PanelContainer.new()
+	var is_ := StyleBoxFlat.new()
+	is_.bg_color = icon_col
+	is_.corner_radius_top_left = 10; is_.corner_radius_top_right = 10
+	is_.corner_radius_bottom_left = 10; is_.corner_radius_bottom_right = 10
+	is_.content_margin_left = 10; is_.content_margin_right = 10
+	is_.content_margin_top = 8;  is_.content_margin_bottom = 8
+	ibx.add_theme_stylebox_override("panel", is_)
+	var ilbl := Label.new()
+	ilbl.text = icon
+	ilbl.add_theme_font_size_override("font_size", 20)
+	ilbl.add_theme_color_override("font_color", Color.WHITE)
+	ibx.add_child(ilbl)
+	top.add_child(ibx)
+
+	var tc := VBoxContainer.new()
+	tc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(tc)
+
+	var tl := Label.new()
+	tl.text = title
+	tl.add_theme_font_size_override("font_size", 17)
+	tl.add_theme_color_override("font_color", Color.WHITE)
+	tc.add_child(tl)
+
+	var sl := Label.new()
+	sl.text = subtitle
+	sl.add_theme_font_size_override("font_size", 12)
+	sl.add_theme_color_override("font_color", Color(0.60, 0.68, 0.85))
+	tc.add_child(sl)
+
+	# Value badge
+	var bbx := PanelContainer.new()
+	var bs_ := StyleBoxFlat.new()
+	bs_.bg_color = icon_col.darkened(0.28)
+	bs_.corner_radius_top_left = 14; bs_.corner_radius_top_right = 14
+	bs_.corner_radius_bottom_left = 14; bs_.corner_radius_bottom_right = 14
+	bs_.content_margin_left = 10; bs_.content_margin_right = 10
+	bs_.content_margin_top = 4;   bs_.content_margin_bottom = 4
+	bbx.add_theme_stylebox_override("panel", bs_)
+	var blbl := Label.new()
+	blbl.text = "%d" % int(init_val)
+	blbl.add_theme_font_size_override("font_size", 15)
+	blbl.add_theme_color_override("font_color", Color.WHITE)
+	bbx.add_child(blbl)
+	top.add_child(bbx)
+
+	# Slider row
+	var srow := HBoxContainer.new()
+	srow.add_theme_constant_override("separation", 6)
+	col.add_child(srow)
+
+	var mn := Label.new(); mn.text = "0"
+	mn.add_theme_font_size_override("font_size", 12)
+	mn.add_theme_color_override("font_color", Color(0.50, 0.58, 0.75))
+	srow.add_child(mn)
+
+	var slider := HSlider.new()
+	slider.min_value = 0; slider.max_value = 100; slider.step = 1
+	slider.value = init_val
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.custom_minimum_size = Vector2(0, 28)
+	slider.value_changed.connect(func(val: float) -> void:
+		blbl.text = "%d" % int(val)
+		on_change.call(val))
+	srow.add_child(slider)
+
+	var mx := Label.new(); mx.text = "100"
+	mx.add_theme_font_size_override("font_size", 12)
+	mx.add_theme_color_override("font_color", Color(0.50, 0.58, 0.75))
+	srow.add_child(mx)
+
+
+func _add_controls_card(parent: Control) -> void:
+	var card := PanelContainer.new()
+	var cs := StyleBoxFlat.new()
+	cs.bg_color = Color(0.12, 0.17, 0.36, 0.90)
+	cs.corner_radius_top_left = 12; cs.corner_radius_top_right = 12
+	cs.corner_radius_bottom_left = 12; cs.corner_radius_bottom_right = 12
+	card.add_theme_stylebox_override("panel", cs)
+	parent.add_child(card)
+
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left",   14)
+	m.add_theme_constant_override("margin_right",  14)
+	m.add_theme_constant_override("margin_top",    12)
+	m.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(m)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	m.add_child(col)
+
+	# Header row
+	var hdr := HBoxContainer.new()
+	hdr.add_theme_constant_override("separation", 10)
+	col.add_child(hdr)
+
+	var ibx := PanelContainer.new()
+	var is_ := StyleBoxFlat.new()
+	is_.bg_color = Color(0.52, 0.36, 0.12)
+	is_.corner_radius_top_left = 10; is_.corner_radius_top_right = 10
+	is_.corner_radius_bottom_left = 10; is_.corner_radius_bottom_right = 10
+	is_.content_margin_left = 10; is_.content_margin_right = 10
+	is_.content_margin_top = 7;   is_.content_margin_bottom = 7
+	ibx.add_theme_stylebox_override("panel", is_)
+	var ilbl := Label.new(); ilbl.text = "🎮"
+	ilbl.add_theme_font_size_override("font_size", 18)
+	ibx.add_child(ilbl)
+	hdr.add_child(ibx)
+
+	var htl := Label.new(); htl.text = "Controls"
+	htl.add_theme_font_size_override("font_size", 18)
+	htl.add_theme_color_override("font_color", Color.WHITE)
+	htl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hdr.add_child(htl)
+
+	col.add_child(HSeparator.new())
+
+	_add_ctrl_row(col, ["←", "→"], "Arrow Keys",      "Move left or right")
+	_add_ctrl_row(col, ["↑"],       "Up Arrow (hold)", "Shield up — block falling hazards")
+	_add_ctrl_row(col, ["Space", "Ctrl"], "Hold",      "Shield sides — block birds")
+
+
+func _add_ctrl_row(parent: Control, keys: Array,
+	label: String, sublabel: String) -> void:
+
+	# ── Wrap row in its own card ───────────────────────────
+	var card := PanelContainer.new()
+	var cs := StyleBoxFlat.new()
+	cs.bg_color = Color(0.16, 0.22, 0.42, 0.85)
+	cs.corner_radius_top_left = 8; cs.corner_radius_top_right = 8
+	cs.corner_radius_bottom_left = 8; cs.corner_radius_bottom_right = 8
+	card.add_theme_stylebox_override("panel", cs)
+	parent.add_child(card)
+
+	var cm := MarginContainer.new()
+	cm.add_theme_constant_override("margin_left",   10)
+	cm.add_theme_constant_override("margin_right",  10)
+	cm.add_theme_constant_override("margin_top",     8)
+	cm.add_theme_constant_override("margin_bottom",  8)
+	card.add_child(cm)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	cm.add_child(row)
+
+	var krow := HBoxContainer.new()
+	krow.add_theme_constant_override("separation", 4)
+	krow.custom_minimum_size = Vector2(76, 0)
+	row.add_child(krow)
+
+	for k in keys:
+		var bx := PanelContainer.new()
+		var bs := StyleBoxFlat.new()
+		bs.bg_color = Color(0.18, 0.24, 0.44)
+		bs.border_color = Color(0.42, 0.52, 0.76, 0.85)
+		bs.border_width_left = 1; bs.border_width_right  = 1
+		bs.border_width_top  = 1; bs.border_width_bottom = 1
+		bs.corner_radius_top_left = 7; bs.corner_radius_top_right = 7
+		bs.corner_radius_bottom_left = 7; bs.corner_radius_bottom_right = 7
+		bs.content_margin_left = 8; bs.content_margin_right  = 8
+		bs.content_margin_top  = 5; bs.content_margin_bottom = 5
+		bx.add_theme_stylebox_override("panel", bs)
+		var lbl := Label.new(); lbl.text = k
+		lbl.add_theme_font_size_override("font_size", 13)
+		lbl.add_theme_color_override("font_color", Color(0.85, 0.90, 1.0))
+		bx.add_child(lbl)
+		krow.add_child(bx)
+
+	var tc := VBoxContainer.new()
+	tc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(tc)
+
+	var ml := Label.new(); ml.text = label
+	ml.add_theme_font_size_override("font_size", 14)
+	ml.add_theme_color_override("font_color", Color.WHITE)
+	tc.add_child(ml)
+
+	var sl := Label.new(); sl.text = sublabel
+	sl.add_theme_font_size_override("font_size", 12)
+	sl.add_theme_color_override("font_color", Color(0.56, 0.64, 0.84))
+	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tc.add_child(sl)
