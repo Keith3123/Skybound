@@ -112,6 +112,11 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and _active:
 		_show_in_game_menu()
 		
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_R:
+			get_tree().paused = false
+			GameManager.go_to("res://scenes/game.tscn")
+		
 # ── Background ─────────────────────────────────────────────
 var _bg_top: ColorRect    # Top half of background
 var _bg_bot: ColorRect    # Bottom half of background
