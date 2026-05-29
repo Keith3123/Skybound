@@ -6,6 +6,7 @@ extends Control
 var _fall_sfx: AudioStreamPlayer
 var _btn_sfx: AudioStreamPlayer
 var _gameover_sfx: AudioStreamPlayer
+var _hover_sfx: AudioStreamPlayer
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
 	# NOTE: Anchors are already set in game_over.tscn — no call needed here
@@ -72,7 +73,10 @@ func _build_ui() -> void:
 	inner.add_child(title)
 	
 	_gameover_sfx = AudioStreamPlayer.new()
+	_hover_sfx = AudioStreamPlayer.new()
 	_gameover_sfx.stream = load("res://sounds/gameover.mp3")
+	_hover_sfx.stream = load("res://sounds/hover.mp3")
+	add_child(_hover_sfx)
 	add_child(_gameover_sfx)
 	_gameover_sfx.play()
 
@@ -106,6 +110,7 @@ func _build_ui() -> void:
 	retry.pressed.connect(func(): 
 		_btn_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 		_btn_sfx.play()
+		_hover_sfx.play()
 		await _btn_sfx.finished
 		GameManager.go_to("res://scenes/game.tscn"))
 	inner.add_child(retry)
@@ -114,6 +119,7 @@ func _build_ui() -> void:
 	menu.pressed.connect(func(): 
 		_btn_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
 		_btn_sfx.play()
+		_hover_sfx.play()
 		await _btn_sfx.finished
 		GameManager.go_to("res://scenes/main_menu.tscn"))
 	inner.add_child(menu)
@@ -168,4 +174,9 @@ func _make_btn(text: String, color: Color) -> Button:
 
 	b.add_theme_font_size_override("font_size", 24)
 	b.add_theme_color_override("font_color", Color.WHITE)
+	b.mouse_entered.connect(func():
+		if _hover_sfx:
+			_hover_sfx.stop()
+			_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
+			_hover_sfx.play())
 	return b
