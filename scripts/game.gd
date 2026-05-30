@@ -59,9 +59,14 @@ var _bg_music:  	  AudioStreamPlayer
 var _hover_sfx: 	  AudioStreamPlayer
 var _fall_sfx: AudioStreamPlayer
 var _obstacle_timer: float = 2.5 # first obstacle spawns after 2.5 seconds
+var _menu_open: bool = false
+var _pause_overlay: ColorRect = null
+var _pause_card: PanelContainer = null
+var _jump_sfx: AudioStreamPlayer
 
 # ── Lifecycle ──────────────────────────────────────────────
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameManager.reset()
 	GameManager.score_updated.connect(_on_score_updated)
 	GameManager.theme_changed.connect(_on_theme_changed)
@@ -82,11 +87,14 @@ func _ready() -> void:
 	_bg_music = AudioStreamPlayer.new()
 	_fall_sfx = AudioStreamPlayer.new()
 	_hover_sfx = AudioStreamPlayer.new()
+	_jump_sfx = AudioStreamPlayer.new()
 	_bg_music.volume_db = GameManager.vol_to_db(GameManager.music_volume)
 	_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
+	_jump_sfx.stream = load("res://sounds/369515__lefty_studios__jumping-sfx.wav")
 	_bg_music.stream = load("res://sounds/game.mp3")
 	_fall_sfx.stream = load("res://sounds/412168__poligonstudio__arcade-game-over.wav")
 	_hover_sfx.stream = load("res://sounds/hover.mp3")
+	add_child(_jump_sfx)
 	add_child(_bg_music)
 	add_child(_fall_sfx)
 	add_child(_hover_sfx)
@@ -108,9 +116,12 @@ func _process(delta: float) -> void:
 	_despawn_old_objects()
 	_check_game_over()
 
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and _active:
-		_show_in_game_menu()
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if get_tree().paused:
+			_resume_game()
+		else:
+			_show_in_game_menu()
 		
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_R:
@@ -154,6 +165,36 @@ func _build_containers() -> void:
 	add_child(_coins)
 	add_child(_obstacles)
 
+func _resume_game() -> void:
+	if _pause_overlay:
+		_pause_overlay.queue_free()
+		_pause_overlay = null
+
+	if _pause_card:
+		_pause_card.queue_free()
+		_pause_card = null
+
+	get_tree().paused = false
+	_menu_open = false
+	_active = true
+	_bg_music.stream_paused = false
+	_hover_sfx.stream_paused = false
+	_jump_sfx.stream_paused = false
+	_fall_sfx.stream_paused = false
+	player.set_physics_process(true)
+	player.set_process(true)
+	for p in _platforms.get_children():
+		p.set_process(true)
+		p.set_physics_process(true)
+
+	for d in _decorations.get_children():
+		d.set_process(true)
+		d.set_physics_process(true)
+
+	for o in _obstacles.get_children():
+		o.set_process(true)
+		o.set_physics_process(true)
+	
 # ── Camera ─────────────────────────────────────────────────
 func _build_camera() -> void:
 	camera = Camera2D.new()
@@ -660,8 +701,29 @@ func _show_in_game_menu() -> void:
 		return
 	
 	_active = false  # Pause the game
+	_menu_open = true
 	get_tree().paused = true
-	
+	_bg_music.stream_paused = true
+	_hover_sfx.stream_paused = true
+	_jump_sfx.stream_paused = true
+	_fall_sfx.stream_paused = true
+	player.set_physics_process(false)
+	player.set_process(false)
+	# Platforms
+	for p in _platforms.get_children():
+		p.set_process(false)
+		p.set_physics_process(false)
+
+	# Decorations
+	for d in _decorations.get_children():
+		d.set_process(false)
+		d.set_physics_process(false)
+
+	# Obstacles
+	for o in _obstacles.get_children():
+		o.set_process(false)
+		o.set_physics_process(false)
+
 	# Dark overlay
 	var overlay := ColorRect.new()
 	overlay.color = Color(0.0, 0.0, 0.0, 0.65)
@@ -669,6 +731,7 @@ func _show_in_game_menu() -> void:
 	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 	var hud_layer = get_node("HUD") as CanvasLayer
 	hud_layer.add_child(overlay)
+	_pause_overlay = overlay
 	
 	# Menu card
 	var card := PanelContainer.new()
@@ -689,6 +752,7 @@ func _show_in_game_menu() -> void:
 	card_style.border_color = Color(0.30, 0.55, 1.0, 0.45)
 	card.add_theme_stylebox_override("panel", card_style)
 	hud_layer.add_child(card)
+	_pause_card = card
 	
 	# Margin
 	var margin := MarginContainer.new()
@@ -773,18 +837,20 @@ func _show_in_game_menu() -> void:
 	# Retry button
 	var retry_btn := _make_menu_button("↻  RETRY")
 	retry_btn.pressed.connect(func():
-		overlay.queue_free()
+		overlay.queue_free();
 		card.queue_free()
 		get_tree().paused = false
+		_menu_open = false
 		GameManager.go_to("res://scenes/game.tscn"))
 	vbox.add_child(retry_btn)
 	
 	# Home button
 	var home_btn := _make_menu_button("⌂  HOME")
 	home_btn.pressed.connect(func():
-		overlay.queue_free()
+		overlay.queue_free();
 		card.queue_free()
 		get_tree().paused = false
+		_menu_open = false
 		_bg_music.stop()
 		GameManager.go_to("res://scenes/main_menu.tscn"))
 	vbox.add_child(home_btn)
@@ -792,10 +858,15 @@ func _show_in_game_menu() -> void:
 	# Resume button
 	var resume_btn := _make_menu_button("▶  RESUME")
 	resume_btn.pressed.connect(func():
-		overlay.queue_free()
+		overlay.queue_free();
 		card.queue_free()
 		## Resume Music
 		get_tree().paused = false
+		_bg_music.stream_paused = false
+		_menu_open = false
+		_pause_overlay = null
+		_pause_card = null
+		_resume_game()
 		_active = true)
 	vbox.add_child(resume_btn)
 
