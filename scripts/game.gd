@@ -696,11 +696,10 @@ func _change_music(theme: int) -> void:
 	pass 
 # ── In-Game Menu Panel ────────────────────────────────────
 func _show_in_game_menu() -> void:
-	"""Display the in-game menu with retry, home, and music volume options."""
 	if not _active:
 		return
-	
-	_active = false  # Pause the game
+
+	_active = false
 	_menu_open = true
 	get_tree().paused = true
 	_bg_music.stream_paused = true
@@ -709,158 +708,233 @@ func _show_in_game_menu() -> void:
 	_fall_sfx.stream_paused = true
 	player.set_physics_process(false)
 	player.set_process(false)
-	# Platforms
 	for p in _platforms.get_children():
 		p.set_process(false)
 		p.set_physics_process(false)
-
-	# Decorations
 	for d in _decorations.get_children():
 		d.set_process(false)
 		d.set_physics_process(false)
-
-	# Obstacles
 	for o in _obstacles.get_children():
 		o.set_process(false)
 		o.set_physics_process(false)
 
-	# Dark overlay
+	var hud_layer := get_node("HUD") as CanvasLayer
+
+	# ── Dark overlay ──────────────────────────────────────
 	var overlay := ColorRect.new()
-	overlay.color = Color(0.0, 0.0, 0.0, 0.65)
+	overlay.color = Color(0.0, 0.0, 0.0, 0.60)
 	overlay.size = Vector2(SW, SH)
 	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
-	var hud_layer = get_node("HUD") as CanvasLayer
 	hud_layer.add_child(overlay)
 	_pause_overlay = overlay
-	
-	# Menu card
+
+	# ── Card ─────────────────────────────────────────────
 	var card := PanelContainer.new()
-	card.position = Vector2(60, 200)
-	card.size = Vector2(360, 450)
+	card.position = Vector2(40, 160)
+	card.custom_minimum_size = Vector2(400, 0)
 	card.process_mode = Node.PROCESS_MODE_ALWAYS
-	
 	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.95)
-	card_style.corner_radius_top_left = 20
-	card_style.corner_radius_top_right = 20
-	card_style.corner_radius_bottom_left = 20
-	card_style.corner_radius_bottom_right = 20
-	card_style.border_width_left = 2
-	card_style.border_width_right = 2
-	card_style.border_width_top = 2
+	card_style.bg_color = Color(0.08, 0.12, 0.32, 0.97)
+	card_style.corner_radius_top_left    = 22
+	card_style.corner_radius_top_right   = 22
+	card_style.corner_radius_bottom_left = 22
+	card_style.corner_radius_bottom_right = 22
+	card_style.border_width_left   = 2
+	card_style.border_width_right  = 2
+	card_style.border_width_top    = 2
 	card_style.border_width_bottom = 2
-	card_style.border_color = Color(0.30, 0.55, 1.0, 0.45)
+	card_style.border_color = Color(0.30, 0.55, 1.0, 0.35)
 	card.add_theme_stylebox_override("panel", card_style)
 	hud_layer.add_child(card)
 	_pause_card = card
-	
-	# Margin
+
+	# ── Margin + VBox ─────────────────────────────────────
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	margin.add_theme_constant_override("margin_left",   22)
+	margin.add_theme_constant_override("margin_right",  22)
+	margin.add_theme_constant_override("margin_top",    22)
+	margin.add_theme_constant_override("margin_bottom", 22)
 	card.add_child(margin)
-	
+
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", 14)
 	margin.add_child(vbox)
-	
-	# Title
+
+	# ── Title ─────────────────────────────────────────────
 	var title := Label.new()
 	title.text = "PAUSED"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 40)
+	title.add_theme_font_size_override("font_size", 38)
 	title.add_theme_color_override("font_color", Color.WHITE)
 	vbox.add_child(title)
-	
-	# Music Volume Section
-	var vol_label := Label.new()
-	vol_label.text = "🔊  Music Volume"
-	vol_label.add_theme_font_size_override("font_size", 18)
-	vol_label.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0))
-	vbox.add_child(vol_label)
-	
-	# Music slider
-	var slider := HSlider.new()
-	slider.min_value = 0
-	slider.max_value = 100
-	slider.step = 1
-	slider.value = GameManager.music_volume
-	slider.custom_minimum_size = Vector2(320, 28)
-	slider.value_changed.connect(func(val: float) -> void:
+
+	# ── Helper: volume row ────────────────────────────────
+	# Returns the HSlider so we can wire up value_changed
+	var _make_vol_row = func(
+		icon_text: String,
+		label_text: String,
+		sub_text: String,
+		icon_color: Color,
+		init_val: float
+	) -> Array:  # [HSlider, Label]
+
+		# Outer row card
+		var row := PanelContainer.new()
+		var row_style := StyleBoxFlat.new()
+		row_style.bg_color = Color(0.12, 0.17, 0.36, 0.90)
+		row_style.corner_radius_top_left    = 14
+		row_style.corner_radius_top_right   = 14
+		row_style.corner_radius_bottom_left = 14
+		row_style.corner_radius_bottom_right = 14
+		row_style.border_width_left   = 1
+		row_style.border_width_right  = 1
+		row_style.border_width_top    = 1
+		row_style.border_width_bottom = 1
+		row_style.border_color = Color(1, 1, 1, 0.10)
+		row.add_theme_stylebox_override("panel", row_style)
+		vbox.add_child(row)
+
+		var row_margin := MarginContainer.new()
+		row_margin.add_theme_constant_override("margin_left",   14)
+		row_margin.add_theme_constant_override("margin_right",  14)
+		row_margin.add_theme_constant_override("margin_top",    12)
+		row_margin.add_theme_constant_override("margin_bottom", 12)
+		row.add_child(row_margin)
+
+		var row_vbox := VBoxContainer.new()
+		row_vbox.add_theme_constant_override("separation", 8)
+		row_margin.add_child(row_vbox)
+
+		# Top row: icon + labels + badge
+		var top_hbox := HBoxContainer.new()
+		top_hbox.add_theme_constant_override("separation", 12)
+		row_vbox.add_child(top_hbox)
+
+		# Icon box
+		var icon_panel := PanelContainer.new()
+		icon_panel.custom_minimum_size = Vector2(44, 44)
+		var icon_style := StyleBoxFlat.new()
+		icon_style.bg_color = icon_color
+		icon_style.corner_radius_top_left    = 10
+		icon_style.corner_radius_top_right   = 10
+		icon_style.corner_radius_bottom_left = 10
+		icon_style.corner_radius_bottom_right = 10
+		icon_panel.add_theme_stylebox_override("panel", icon_style)
+		top_hbox.add_child(icon_panel)
+
+		var icon_lbl := Label.new()
+		icon_lbl.text = icon_text
+		icon_lbl.add_theme_font_size_override("font_size", 22)
+		icon_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+		icon_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		icon_panel.add_child(icon_lbl)
+
+		# Label + sub
+		var info_vbox := VBoxContainer.new()
+		info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info_vbox.add_theme_constant_override("separation", 2)
+		top_hbox.add_child(info_vbox)
+
+		var name_lbl := Label.new()
+		name_lbl.text = label_text
+		name_lbl.add_theme_font_size_override("font_size", 16)
+		name_lbl.add_theme_color_override("font_color", Color.WHITE)
+		info_vbox.add_child(name_lbl)
+
+		var sub_lbl := Label.new()
+		sub_lbl.text = sub_text
+		sub_lbl.add_theme_font_size_override("font_size", 12)
+		sub_lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.45))
+		info_vbox.add_child(sub_lbl)
+
+		# Badge
+		var badge_panel := PanelContainer.new()
+		badge_panel.custom_minimum_size = Vector2(52, 36)
+		var badge_style := StyleBoxFlat.new()
+		badge_style.bg_color = icon_color.darkened(0.28)
+		badge_style.corner_radius_top_left    = 8
+		badge_style.corner_radius_top_right   = 8
+		badge_style.corner_radius_bottom_left = 8
+		badge_style.corner_radius_bottom_right = 8
+		badge_panel.add_theme_stylebox_override("panel", badge_style)
+		top_hbox.add_child(badge_panel)
+
+		var badge_lbl := Label.new()
+		badge_lbl.text = "%d" % int(init_val)
+		badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		badge_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+		badge_lbl.add_theme_font_size_override("font_size", 15)
+		badge_lbl.add_theme_color_override("font_color", Color.WHITE)
+		badge_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		badge_panel.add_child(badge_lbl)
+
+		# Slider row: 0 — slider — 100
+		var slider_hbox := HBoxContainer.new()
+		slider_hbox.add_theme_constant_override("separation", 8)
+		row_vbox.add_child(slider_hbox)
+
+		var lbl0 := Label.new()
+		lbl0.text = "0"
+		lbl0.add_theme_font_size_override("font_size", 11)
+		lbl0.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
+		slider_hbox.add_child(lbl0)
+
+		var slider := HSlider.new()
+		slider.min_value = 0
+		slider.max_value = 100
+		slider.step = 1
+		slider.value = init_val
+		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slider.custom_minimum_size = Vector2(0, 26)
+
+		slider.custom_minimum_size = Vector2(0, 28)
+
+		slider_hbox.add_child(slider)
+
+		var lbl100 := Label.new()
+		lbl100.text = "100"
+		lbl100.add_theme_font_size_override("font_size", 11)
+		lbl100.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
+		slider_hbox.add_child(lbl100)
+
+		# Wire badge to slider
+		slider.value_changed.connect(func(val: float) -> void:
+			badge_lbl.text = "%d" % int(val))
+
+		return [slider, badge_lbl]
+
+	# ── Music row ─────────────────────────────────────────
+	var music_result: Array = _make_vol_row.call(
+		"🔊", "Music Volume", "Background tracks",
+		Color(0.13, 0.75, 0.47),   # green
+		GameManager.music_volume
+	)
+	var music_slider := music_result[0] as HSlider
+	music_slider.value_changed.connect(func(val: float) -> void:
 		GameManager.music_volume = val
 		_bg_music.volume_db = GameManager.vol_to_db(val))
-	vbox.add_child(slider)
-	
-	var vol_value := Label.new()
-	vol_value.text = "%d / 100" % int(GameManager.music_volume)
-	vol_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vol_value.add_theme_font_size_override("font_size", 14)
-	vol_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	slider.value_changed.connect(func(val: float) -> void:
-		vol_value.text = "%d / 100" % int(val))
-	vbox.add_child(vol_value)
-	
-	#SFX Volume Slider
-	var sfx_label := Label.new()
-	sfx_label.text = "🎵  SFX Volume"
-	sfx_label.add_theme_font_size_override("font_size", 18)
-	sfx_label.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0))
-	vbox.add_child(sfx_label)
-	
-	#SFX slider
-	var sfx_slider := HSlider.new()
-	sfx_slider.min_value = 0
-	sfx_slider.max_value = 100
-	sfx_slider.step = 1
-	sfx_slider.value = GameManager.sfx_volume
-	sfx_slider.custom_minimum_size = Vector2(320, 28)
+
+	# ── SFX row ───────────────────────────────────────────
+	var sfx_result: Array = _make_vol_row.call(
+		"🎵", "SFX Volume", "Sound effects",
+		Color(0.29, 0.55, 0.96),   # blue
+		GameManager.sfx_volume
+	)
+	var sfx_slider := sfx_result[0] as HSlider
 	sfx_slider.value_changed.connect(func(val: float) -> void:
 		GameManager.sfx_volume = val)
-	vbox.add_child(sfx_slider)
-	
-	var sfx_value := Label.new()
-	sfx_value.text = "%d / 100" % int(GameManager.sfx_volume)
-	sfx_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sfx_value.add_theme_font_size_override("font_size", 14)
-	sfx_value.add_theme_color_override("font_color", Color(0.70, 0.80, 1.0))
-	sfx_slider.value_changed.connect(func(val: float) -> void:
-		sfx_value.text = "%d / 100" % int(val))
-	vbox.add_child(sfx_value)
-	
-	# Spacer
+
+	# ── Spacer ────────────────────────────────────────────
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 12)
+	spacer.custom_minimum_size = Vector2(0, 4)
 	vbox.add_child(spacer)
-	
-	# Retry button
-	var retry_btn := _make_menu_button("↻  RETRY")
-	retry_btn.pressed.connect(func():
-		overlay.queue_free();
-		card.queue_free()
-		get_tree().paused = false
-		_menu_open = false
-		GameManager.go_to("res://scenes/game.tscn"))
-	vbox.add_child(retry_btn)
-	
-	# Home button
-	var home_btn := _make_menu_button("⌂  HOME")
-	home_btn.pressed.connect(func():
-		overlay.queue_free();
-		card.queue_free()
-		get_tree().paused = false
-		_menu_open = false
-		_bg_music.stop()
-		GameManager.go_to("res://scenes/main_menu.tscn"))
-	vbox.add_child(home_btn)
-	
-	# Resume button
-	var resume_btn := _make_menu_button("▶  RESUME")
+
+	# ── Resume button (green, prominent) ──────────────────
+	var resume_btn := _make_menu_button("▶  RESUME", Color(0.13, 0.75, 0.47), Color(0.18, 0.88, 0.55))
 	resume_btn.pressed.connect(func():
-		overlay.queue_free();
+		overlay.queue_free()
 		card.queue_free()
-		## Resume Music
 		get_tree().paused = false
 		_bg_music.stream_paused = false
 		_menu_open = false
@@ -870,42 +944,62 @@ func _show_in_game_menu() -> void:
 		_active = true)
 	vbox.add_child(resume_btn)
 
-func _make_menu_button(text: String) -> Button:
-	"""Create a styled menu button for in-game menu."""
+	# ── Retry button (blue) ───────────────────────────────
+	var retry_btn := _make_menu_button("↻  RETRY", Color(0.29, 0.55, 0.96), Color(0.38, 0.65, 1.0))
+	retry_btn.pressed.connect(func():
+		overlay.queue_free()
+		card.queue_free()
+		get_tree().paused = false
+		_menu_open = false
+		GameManager.go_to("res://scenes/game.tscn"))
+	vbox.add_child(retry_btn)
+
+	# ── Home button (subtle) ──────────────────────────────
+	var home_btn := _make_menu_button("⌂  HOME", Color(1, 1, 1, 0.10), Color(1, 1, 1, 0.18))
+	home_btn.pressed.connect(func():
+		overlay.queue_free()
+		card.queue_free()
+		get_tree().paused = false
+		_menu_open = false
+		_bg_music.stop()
+		GameManager.go_to("res://scenes/main_menu.tscn"))
+	vbox.add_child(home_btn)
+
+
+func _make_menu_button(text: String, col_normal: Color, col_hover: Color) -> Button:
 	var btn := Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(320, 54)
-	
+	btn.custom_minimum_size = Vector2(356, 52)
+
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.35, 0.55, 0.85)
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_left = 10
-	style.corner_radius_bottom_right = 10
-	style.content_margin_left = 15
-	style.content_margin_right = 15
-	style.content_margin_top = 8
+	style.bg_color = col_normal
+	style.corner_radius_top_left    = 12
+	style.corner_radius_top_right   = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.content_margin_left   = 15
+	style.content_margin_right  = 15
+	style.content_margin_top    = 8
 	style.content_margin_bottom = 8
 	btn.add_theme_stylebox_override("normal", style)
-	
+
 	var hover := style.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.45, 0.65, 0.95)
+	hover.bg_color = col_hover
 	btn.add_theme_stylebox_override("hover", hover)
-	
-	var pressed := style.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.25, 0.45, 0.75)
-	btn.add_theme_stylebox_override("pressed", pressed)
-	
+
+	var pressed_style := style.duplicate() as StyleBoxFlat
+	pressed_style.bg_color = col_normal.darkened(0.15)
+	btn.add_theme_stylebox_override("pressed", pressed_style)
+
 	btn.add_theme_font_size_override("font_size", 20)
 	btn.add_theme_color_override("font_color", Color.WHITE)
-	
+
 	btn.mouse_entered.connect(func():
 		if _hover_sfx:
 			_hover_sfx.stop()
 			_hover_sfx.volume_db = GameManager.vol_to_db(GameManager.sfx_volume)
-			_hover_sfx.play()
-	)
-	
+			_hover_sfx.play())
+
 	return btn
 
 # ── Obstacle Spawner ───────────────────────────────────────
